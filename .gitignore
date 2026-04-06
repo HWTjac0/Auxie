@@ -1,0 +1,43 @@
+# --- System ---
+.DS_Store
+Thumbs.db
+
+# --- Nix ---
+.direnv/
+result
+result-*
+
+# --- Backend ---
+backend/tmp/
+backend/bin/
+backend/main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+*.db
+*.db-journal
+*.db-wal
+
+# --- Frontend ---
+frontend/node_modules/
+frontend/dist/
+
+bun.lockb
+*.log
+*.log.*
+.svelte-kit/
+.vercel/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- ENV ---
+.env
+.env.local
+.env.*.local
