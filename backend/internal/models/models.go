@@ -9,7 +9,7 @@ type User struct {
 	ID            int            `db:"id"`
 	Email         string         `db:"email"`    // NOT NULL
 	Username      string         `db:"username"` // NOT NULL
-	Type          sql.NullString `db:"type"`
+	Type          UserType       `db:"type"`
 	SpotifyID     sql.NullString `db:"spotify_id"`
 	SoundCloudID  sql.NullString `db:"soundcloud_id"`
 	TidalID       sql.NullString `db:"tidal_id"`
@@ -17,7 +17,7 @@ type User struct {
 	SoundCloudKey sql.NullString `db:"soundcloud_key"`
 	TidalKey      sql.NullString `db:"tidal_key"`
 	CurrentRoomID sql.NullInt64  `db:"current_room_id"`
-	CurrentRole   sql.NullString `db:"current_role"`
+	CurrentRole   UserRole       `db:"current_role"`
 	CreatedAt     time.Time      `db:"created_at"`
 }
 
@@ -45,7 +45,7 @@ type RoomTrack struct {
 	TrackID        int          `db:"track_id"` // NOT NULL
 	AddedBy        int          `db:"added_by"` // NOT NULL
 	Position       int          `db:"position"` // NOT NULL
-	Status         string       `db:"status"`   // NOT NULL
+	Status         TrackStatus  `db:"status"`   // NOT NULL
 	StartTimestamp sql.NullTime `db:"start_timestamp"`
 	EndTimestamp   sql.NullTime `db:"end_timestamp"`
 	LikeCount      int          `db:"like_count"`
