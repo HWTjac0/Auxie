@@ -1,13 +1,74 @@
 package database
 
 import (
+	"context"
+
 	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 )
+
+type SQLHandler interface {
+	sqlx.Ext
+	sqlx.Preparer
+	Get(dest interface{}, query string, args ...interface{}) error
+	Select(dest interface{}, query string, args ...interface{}) error
+	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+}
+
+type DB struct {
+	*sqlx.DB
+}
+
+func InitSqliteDB(path string) (*DB, error) {
+	db_conn, err := sqlx.Connect("sqlite3", path)
+	if err != nil {
+		return nil, err
+	}
+
+	db_conn.MustExec("PRAGMA journal_mode = WAL;")
+	db_conn.MustExec("PRAGMA synchronous = NORMAL;")
+	db_conn.MustExec("PRAGMA foreign_keys = ON;")
+
+	db_conn.SetMaxOpenConns(1)
+
+	if err := SetupSchema(db_conn); err != nil {
+		return nil, err
+	}
+
+	return &DB{db_conn}, nil
+}
+
+func (db *DB) WithTransaction(ctx context.Context, fn func(q SQLHandler) error) error {
+	tx, err := db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		}
+	}()
+
+	if err := fn(tx); err != nil {
+		tx.Rollback()
+		return nil
+	}
+
+	return tx.Commit()
+}
+
+func SetupSchema(db *sqlx.DB) error {
+	_, err := db.Exec(schema)
+	return err
+}
 
 var schema = `
 PRAGMA foreign_keys = OFF;
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
     username TEXT NOT NULL,
@@ -25,7 +86,7 @@ CREATE TABLE users (
     FOREIGN KEY (current_room_id) REFERENCES rooms(id) ON DELETE SET NULL
 );
 
-CREATE TABLE rooms (
+CREATE TABLE IF NOT EXISTS  rooms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     host_id INTEGER NOT NULL,
@@ -35,7 +96,7 @@ CREATE TABLE rooms (
     FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE tracks (
+CREATE TABLE IF NOT EXISTS  tracks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_uri TEXT NOT NULL,
     artist TEXT,
@@ -45,7 +106,7 @@ CREATE TABLE tracks (
     platform TEXT
 );
 
-CREATE TABLE room_tracks (
+CREATE TABLE IF NOT EXISTS  room_tracks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     room_id INTEGER NOT NULL,
     track_id INTEGER NOT NULL,
@@ -62,7 +123,7 @@ CREATE TABLE room_tracks (
     FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE archivals (
+CREATE TABLE IF NOT EXISTS  archivals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     room_id INTEGER,
     name TEXT NOT NULL,
@@ -71,7 +132,7 @@ CREATE TABLE archivals (
     FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE SET NULL
 );
 
-CREATE TABLE archival_tracks (
+CREATE TABLE IF NOT EXISTS  archival_tracks (
     archival_id INTEGER NOT NULL,
     track_id INTEGER NOT NULL,
     
@@ -79,29 +140,4 @@ CREATE TABLE archival_tracks (
     FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
     PRIMARY KEY (archival_id, track_id) 
 );
-
-PRAGMA foreign_keys = ON;
 `
-
-type SqliteDB struct {
-	db *sqlx.DB
-}
-
-func InitSqliteDB(path string) (*SqliteDB, error) {
-	db_conn, err := sqlx.Connect("sqlite", path)
-	if err != nil {
-		return nil, err
-	}
-
-	db_conn.MustExec("PRAGMA journal_mode = WAL;")
-	db_conn.MustExec("PRAGMA synchronous = NORMAL;")
-
-	db_conn.SetMaxOpenConns(1)
-
-	if _, err := db_conn.Exec(schema); err != nil {
-		return nil, err
-	}
-
-	return &SqliteDB{db: db_conn}, nil
-}
-
