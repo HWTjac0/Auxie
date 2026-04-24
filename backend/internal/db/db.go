@@ -7,6 +7,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Common interface for sqlx.DB and sqlx.TX
 type SQLHandler interface {
 	sqlx.Ext
 	sqlx.Preparer
