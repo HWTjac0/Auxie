@@ -1,7 +1,25 @@
 <script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import favicon from '$lib/assets/favicon.svg';
 
-	let { children } = $props();
+let { children } = $props();
+
+onMount(async () => {
+    try {
+        const res = await fetch("http://127.0.0.1:8080/api/v1/auth/me", {
+            credentials: "include"
+        });
+        if (!res.ok) {
+            goto('/welcome');
+        } else if (res.ok && $page.url.pathname === '/welcome') {
+            goto("/");
+        }
+    } catch (e) {
+        goto('/welcome');
+    }
+});
 </script>
 
 <svelte:head>
