@@ -1,6 +1,6 @@
 <div align="center">
   <img src="./assets/logo.png" alt="Auxie Logo" width="50" style="vertical-align: middle;">
-  <h1 style="display: inline; vertical-align: middle; margin-left: 10px;">Auxie</h1>
+  <span style="font-size: 2.5em; font-weight: bold; vertical-align: middle; margin-left: 10px;">Auxie</span>
 </div>
 <p align="center">
   <i>Cross-platform shared music queue application with democratized track selection and permissions system.</i>
