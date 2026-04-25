@@ -1,10 +1,13 @@
-<div align="center">
-  <img src="./assets/logo.png" alt="Auxie Logo" width="50" style="vertical-align: middle;">
-  <span style="font-size: 2.5em; font-weight: bold; vertical-align: middle; margin-left: 10px;">Auxie</span>
-</div>
-<p align="center">
-  <i>Cross-platform shared music queue application with democratized track selection and permissions system.</i>
-</p>
+<table align="center" style="border: none; border-collapse: collapse;">
+  <tr style="border: none;">
+    <td style="border: none; padding: 0;">
+      <img src="assets/logo.png" width="60" alt="Auxie Logo">
+    </td>
+    <td style="border: none; padding-left: 15px;">
+      <h1>Auxie</h1>
+    </td>
+  </tr>
+</table>
 
 Planned key features:
 - *Democratized queue* - Users vote to skip or like tracks, influencing the playback order in real-time.
