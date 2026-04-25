@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import favicon from '$lib/assets/favicon.svg';
 
 let { children } = $props();
@@ -13,7 +13,7 @@ onMount(async () => {
         });
         if (!res.ok) {
             goto('/welcome');
-        } else if (res.ok && $page.url.pathname === '/welcome') {
+        } else if (res.ok && page.url.pathname === '/welcome') {
             goto("/");
         }
     } catch (e) {
