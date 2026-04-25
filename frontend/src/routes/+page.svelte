@@ -1,5 +1,7 @@
-<script>
-
+<script lang="ts">
+const loginWithSpotify = () => {
+   window.location.href = "http://127.0.0.1:8080/api/v1/auth/spotify/login";
+};
 </script>
-<h1>Hello to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<h1>Welcome to Auxie!</h1>
+<button onclick={loginWithSpotify}>Login with Spotify</button>
