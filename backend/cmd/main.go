@@ -2,12 +2,12 @@ package main
 
 import (
 	"auxie/backend/internal/handlers"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	database "auxie/backend/internal/db"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -21,6 +21,13 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	db, err := database.InitSqliteDB("auxie.db")
+	if err != nil {
+		log.Fatalf("Database couldn't be initialized: %v", err)
+	}
+
+	defer db.Close()
+
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://127.0.0.1:5173"},
@@ -32,9 +39,6 @@ func main() {
 	}))
 
 	secret := os.Getenv("COOKIE_SECRET_KEY")
-	if secret == "" {
-		fmt.Println("brak sekretu")
-	}
 	store := cookie.NewStore([]byte(secret))
 
 	store.Options(sessions.Options{
