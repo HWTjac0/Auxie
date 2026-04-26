@@ -74,17 +74,21 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     username TEXT NOT NULL,
     type TEXT CHECK(type IN ('Registered', 'Guest')),
-    spotify_id TEXT,
+
     soundcloud_id TEXT,
+    soundcloud_key TEXT,
     tidal_id TEXT,
+    tidal_key TEXT,
+
+    spotify_id TEXT,
     spotify_auth_key TEXT,
     spotify_refresh_key TEXT,
-    soundcloud_key TEXT,
-    tidal_key TEXT,
+		spotify_token_expires_at DATETIME,
+
     current_room_id INTEGER,
     current_role TEXT CHECK(current_role IN ('Host', 'DJ', 'Guest')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (current_room_id) REFERENCES rooms(id) ON DELETE SET NULL
 );
 
