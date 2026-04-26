@@ -2,12 +2,14 @@ package main
 
 import (
 	"auxie/backend/internal/handlers"
+	"auxie/backend/internal/repositories"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
 	database "auxie/backend/internal/db"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -49,6 +51,8 @@ func main() {
 		SameSite: http.SameSiteLaxMode,
 	})
 	router.Use(sessions.Sessions("auxie-session", store))
+
+	// app := repositories.NewApp(db)
 
 	api := router.Group("/api")
 	{
