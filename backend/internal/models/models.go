@@ -6,19 +6,20 @@ import (
 )
 
 type User struct {
-	ID            int            `db:"id"`
-	Email         string         `db:"email"`    // NOT NULL
-	Username      string         `db:"username"` // NOT NULL
-	Type          UserType       `db:"type"`
-	SpotifyID     sql.NullString `db:"spotify_id"`
-	SoundCloudID  sql.NullString `db:"soundcloud_id"`
-	TidalID       sql.NullString `db:"tidal_id"`
-	SpotifyKey    sql.NullString `db:"spotify_key"`
-	SoundCloudKey sql.NullString `db:"soundcloud_key"`
-	TidalKey      sql.NullString `db:"tidal_key"`
-	CurrentRoomID sql.NullInt64  `db:"current_room_id"`
-	CurrentRole   UserRole       `db:"current_role"`
-	CreatedAt     time.Time      `db:"created_at"`
+	ID                int            `db:"id"`
+	Email             string         `db:"email"`    // NOT NULL
+	Username          string         `db:"username"` // NOT NULL
+	Type              UserType       `db:"type"`
+	SpotifyID         sql.NullString `db:"spotify_id"`
+	SpotifyAuthKey    sql.NullString `db:"spotify_auth_key"`
+	SpotifyRefreshKey sql.NullString `db:"spotify_refresh_key"`
+	SoundCloudID      sql.NullString `db:"soundcloud_id"`
+	TidalID           sql.NullString `db:"tidal_id"`
+	SoundCloudKey     sql.NullString `db:"soundcloud_key"`
+	TidalKey          sql.NullString `db:"tidal_key"`
+	CurrentRoomID     sql.NullInt64  `db:"current_room_id"`
+	CurrentRole       UserRole       `db:"current_role"`
+	CreatedAt         time.Time      `db:"created_at"`
 }
 
 type Room struct {
@@ -63,4 +64,3 @@ type ArchivalTrack struct {
 	ArchivalID int `db:"archival_id"`
 	TrackID    int `db:"track_id"`
 }
-

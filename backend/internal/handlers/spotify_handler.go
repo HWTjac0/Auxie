@@ -111,7 +111,7 @@ func SpotifyCallback(c *gin.Context) {
 		fmt.Println("Error saving session")
 	}
 
-	c.Redirect(http.StatusTemporaryRedirect, "http://127.0.0.1:5173/dashboard")
+	c.Redirect(http.StatusTemporaryRedirect, "http://127.0.0.1:5173/")
 }
 
 func GetMe(c *gin.Context) {
