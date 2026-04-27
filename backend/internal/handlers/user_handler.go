@@ -2,5 +2,7 @@ package handlers
 
 import ()
 
-// TODO: do usatlenia
+type UserHandler struct {
+	
+}
 
