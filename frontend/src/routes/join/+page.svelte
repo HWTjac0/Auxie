@@ -1,3 +1,6 @@
 <h2>Join room</h2>
-<input type="text">
-<button>Enter</button>
+<form method="POST">
+  <input type="text" placeholder="Username">
+  <input type="text" placeholder="Join code">
+  <button>Enter</button>
+</form>
