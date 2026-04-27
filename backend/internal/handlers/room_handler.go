@@ -9,12 +9,35 @@ type RoomHandler struct {
 	roomRepo *repositories.RoomSqliteRepo
 }
 
-func NewRoomHandler(roomRepo *repositories.RoomSqliteRepo) *RoomHandler {
-	host_id := session.Get("user_id")
-	name := session.Get("display_name")
+func GetRandomRoomName() string {
+	var randomName string
+	OK_name := false
 
-	
+	for !OK_name {
+		randomName = "Room number " + string(rand.Intn(1000))
+		if !CheckIfRoomNameExists(randomName) {
+			OK_name = true
+		}
+	}
+	return randomName
+}
 
+func CheckIfRoomNameExists(name string) bool {
+	query := "SELECT COUNT(*) FROM rooms WHERE name = ?"
+	var count int
+	err := r.db.QueryRow(query, name).Scan(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
 
-	return &RoomHandler{roomRepo}
+func CheckIfHostHasRoom(host_id int) bool {
+	query := "SELECT COUNT(*) FROM rooms WHERE host_id = ?"
+	var count int
+	err := r.db.QueryRow(query, host_id).Scan(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
 }
