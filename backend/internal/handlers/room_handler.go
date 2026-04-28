@@ -41,3 +41,23 @@ func CheckIfHostHasRoom(host_id int) bool {
 	}
 	return count > 0
 }
+
+func AddTrackToRoom(room_id int, track_id int, user_id int) error {
+	query := "SELECT COUNT(*) FROM room_tracks WHERE room_id = ?"
+	var count int
+	err := r.db.QueryRow(query, room_id).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check room queue: %w", err)
+	}
+	query := "INSERT INTO room_tracks (room_id, track_id, user_id) VALUES (?, ?, ?)"
+	_, err := r.db.Exec(query, room_id, track_id, user_id)
+	return err
+}
+
+func ChangeTrackPosition(room_id int, track_id int, new_position int) error {
+
+};
+
+func NextTrackInRoom(room_id int) (int, error) {
+
+}
