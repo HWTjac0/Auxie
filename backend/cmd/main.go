@@ -3,7 +3,6 @@ package main
 import (
 	"auxie/backend/internal/app"
 	"auxie/backend/internal/handlers"
-	"auxie/backend/internal/repositories"
 	"log"
 	"net/http"
 	"os"

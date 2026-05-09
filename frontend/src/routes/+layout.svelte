@@ -7,11 +7,14 @@ import favicon from '$lib/assets/favicon.svg';
 let { children } = $props();
 
 onMount(async () => {
+   const publicPaths = ['/welcome', '/create', '/host'];
+   const isPublicPath = publicPaths.includes(page.url.pathname);
     try {
         const res = await fetch("http://127.0.0.1:8080/api/v1/auth/me", {
             credentials: "include"
         });
         if (!res.ok) {
+          if(!isPublicPath)
             goto('/welcome');
         } else if (res.ok && page.url.pathname === '/welcome') {
             goto("/");

@@ -1,8 +1,8 @@
 package database
 
 import (
+	"auxie/backend/migrations"
 	"context"
-	"embed"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,8 +10,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
-
-var migrationFiles embed.FS
 
 // Common interface for sqlx.DB and sqlx.TX
 type SQLHandler interface {
@@ -54,7 +52,7 @@ func (db *DB) RunMigrations() error {
 		return err
 	}
 
-	entries, err := migrationFiles.ReadDir("../../migrations")
+	entries, err := migrations.FS.ReadDir(".")
 	if err != nil {
 		return err
 	}
@@ -80,7 +78,7 @@ func (db *DB) RunMigrations() error {
 		}
 
 		fmt.Printf("Running migration: %s\n", file)
-		content, err := migrationFiles.ReadFile("../../migrations/" + file)
+		content, err := migrations.FS.ReadFile(file)
 		if err != nil {
 			return err
 		}
@@ -96,7 +94,7 @@ func (db *DB) RunMigrations() error {
 		})
 
 		if err != nil {
-			return fmt.Errorf("Error in file%s: %w", file, err)
+			return fmt.Errorf("Error in file %s: %w", file, err)
 		}
 	}
 
