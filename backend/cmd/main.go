@@ -1,6 +1,7 @@
 package main
 
 import (
+	"auxie/backend/internal/app"
 	"auxie/backend/internal/handlers"
 	"auxie/backend/internal/repositories"
 	"log"
@@ -52,7 +53,7 @@ func main() {
 	})
 	router.Use(sessions.Sessions("auxie-session", store))
 
-	// app := repositories.NewApp(db)
+	app := app.NewApp(db)
 
 	api := router.Group("/api")
 	{
@@ -62,6 +63,9 @@ func main() {
 			auth.GET("/me", handlers.GetMe)
 			auth.GET("/spotify/login", handlers.SpotifyLogin)
 			auth.GET("/spotify/callback", handlers.SpotifyCallback)
+
+			room := v1.Group("/room")
+			room.GET("/random_name", app.RoomHandler.GetRandomRoomName)
 		}
 	}
 	router.Run("127.0.0.1:8080")
