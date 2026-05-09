@@ -3,15 +3,15 @@ package repositories
 import database "auxie/backend/internal/db"
 
 type App struct {
-	userRepo  *UserRepository
-	trackRepo *TrackRepository
-	roomRepo  *TrackRepository
+	UserRepo  UserRepository
+	TrackRepo TrackRepository
+	RoomRepo  RoomRepository
 }
 
 func NewApp(db *database.DB) *App {
 	return &App{
-		userRepo:  NewUserSqliteRepo(db),
-		trackRepo: NewTrackSqliteRepo(db),
-		roomRepo:  NewRoomSqliteRepo(db),
+		UserRepo:  NewUserSqliteRepo(db),
+		TrackRepo: NewTrackSqliteRepo(db),
+		RoomRepo:  NewRoomSqliteRepo(db),
 	}
 }

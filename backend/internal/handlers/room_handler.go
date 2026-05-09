@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"auxie/backend/internal/repositories"
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -56,8 +58,9 @@ func AddTrackToRoom(room_id int, track_id int, user_id int) error {
 
 func ChangeTrackPosition(room_id int, track_id int, new_position int) error {
 
-};
+}
 
 func NextTrackInRoom(room_id int) (int, error) {
 
 }
+
