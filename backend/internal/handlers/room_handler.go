@@ -17,23 +17,19 @@ func (h *RoomHandler) GetRandomRoomName() string {
 	return randomName
 }
 
-func (h *RoomHandler) CheckIfRoomNameExists(name string) bool {
-	return count > 0
-}
-
-func CheckIfHostHasRoom(host_id int) bool {
+func (h *RoomHandler) CheckIfHostHasRoom(host_id int) bool {
 	return false
 }
 
-func AddTrackToRoom(room_id int, track_id int, user_id int) error {
+func (h *RoomHandler) AddTrackToRoom(room_id int, track_id int, user_id int) error {
 	return err
 }
 
-func ChangeTrackPosition(room_id int, track_id int, new_position int) error {
+func (h *RoomHandler) ChangeTrackPosition(room_id int, track_id int, new_position int) error {
 	return
 }
 
-func NextTrackInRoom(room_id int) (int, error) {
+func (h *RoomHandler) NextTrackInRoom(room_id int) (int, error) {
 
 }
 
