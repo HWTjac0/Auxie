@@ -25,6 +25,6 @@ func NewApp(db *database.DB) *App {
 		RoomRepo:  roomRepo,
 
 		UserHandler: handlers.NewUserHandler(userRepo),
-		RoomHandler: handlers.NewRoomHandler(roomRepo),
+		RoomHandler: handlers.NewRoomHandler(roomRepo, userRepo),
 	}
 }

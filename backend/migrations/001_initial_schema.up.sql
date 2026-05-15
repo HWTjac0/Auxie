@@ -2,7 +2,7 @@ PRAGMA foreign_keys = OFF;
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE,
     username TEXT NOT NULL,
     type TEXT CHECK(type IN ('Registered', 'Guest')),
 
@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS rooms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    join_code TEXT NOT NULL UNIQUE,
+    slug TEXT NOT NULL UNIQUE,
     host_id INTEGER NOT NULL,
     last_played_position INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

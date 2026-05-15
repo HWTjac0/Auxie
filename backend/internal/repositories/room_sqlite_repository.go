@@ -15,8 +15,14 @@ func NewRoomSqliteRepo(db *database.DB) *RoomSqliteRepo {
 }
 
 func (r *RoomSqliteRepo) Create(room *models.Room) (int64, error) {
-	log.Println("TODO: implement RoomSqliteRepo.Create")
-	return 0, nil
+	query := `INSERT INTO rooms (name, join_code, slug, host_id, created_at) VALUES (?, ?, ?, ?, ?)`
+	
+	result, err := r.db.Exec(query, room.Name, room.JoinCode, room.Slug, room.HostID, room.CreatedAt)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
 }
 
 func (r *RoomSqliteRepo) GetByID(id int) (*models.Room, error) {
