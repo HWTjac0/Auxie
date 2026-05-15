@@ -65,6 +65,9 @@ func main() {
 
 			room := v1.Group("/room")
 			room.GET("/random_name", app.RoomHandler.GetRandomRoomName)
+
+			user := v1.Group("/user")
+			user.GET("/random_name", app.UserHandler.GetRandomUserName)
 		}
 	}
 	router.Run("127.0.0.1:8080")
