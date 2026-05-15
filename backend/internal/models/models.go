@@ -7,7 +7,7 @@ import (
 
 type User struct {
 	ID                int            `db:"id"`
-	Email             string         `db:"email"`
+	Email             sql.NullString `db:"email"`
 	Username          string         `db:"username"` // NOT NULL
 	Type              UserType       `db:"type"`
 	SpotifyID         sql.NullString `db:"spotify_id"`
