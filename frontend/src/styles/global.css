@@ -1,0 +1,133 @@
+:root {
+  /* Auxie - Razzmatazz */
+  --auxie-razzmatazz-50: #FFF2F8;
+  --auxie-razzmatazz-100: #FFE6F1;
+  --auxie-razzmatazz-200: #FFBFDB;
+  --auxie-razzmatazz-300: #FF99C5;
+  --auxie-razzmatazz-400: #FF4D9A;
+  --auxie-razzmatazz-500: #FF006F;
+  --auxie-razzmatazz-600: #E60064;
+  --auxie-razzmatazz-700: #990043;
+  --auxie-razzmatazz-800: #730032;
+  --auxie-razzmatazz-900: #4D0021;
+
+  /* Auxie - Obsidian */
+  --auxie-obsidian-50: #F3F3F3;
+  --auxie-obsidian-100: #E7E7E8;
+  --auxie-obsidian-200: #C2C3C5;
+  --auxie-obsidian-300: #9D9EA2;
+  --auxie-obsidian-400: #54565D;
+  --auxie-obsidian-500: #0B0D17;
+  --auxie-obsidian-600: #0A0C15;
+  --auxie-obsidian-700: #07080E;
+  --auxie-obsidian-800: #05060A;
+  --auxie-obsidian-900: #030407;
+
+  /* Auxie - DeepNavy */
+  --auxie-deep-navy-50: #F4F4F5;
+  --auxie-deep-navy-100: #E8E9EB;
+  --auxie-deep-navy-200: #C6C7CC;
+  --auxie-deep-navy-300: #A4A6AD;
+  --auxie-deep-navy-400: #606370;
+  --auxie-deep-navy-500: #1C2033;
+  --auxie-deep-navy-600: #191D2E;
+  --auxie-deep-navy-700: #11131F;
+  --auxie-deep-navy-800: #0D0E17;
+  --auxie-deep-navy-900: #080A0F;
+
+  /* Auxie - ElectricPurple */
+  --auxie-electric-purple-50: #F8F2FF;
+  --auxie-electric-purple-100: #F1E6FF;
+  --auxie-electric-purple-200: #DBBFFF;
+  --auxie-electric-purple-300: #C699FF;
+  --auxie-electric-purple-400: #9B4DFF;
+  --auxie-electric-purple-500: #7000FF;
+  --auxie-electric-purple-600: #6500E6;
+  --auxie-electric-purple-700: #430099;
+  --auxie-electric-purple-800: #320073;
+  --auxie-electric-purple-900: #22004D;
+
+  /* Auxie - CloudWhite */
+  --auxie-cloud-white-50: #FEFEFE;
+  --auxie-cloud-white-100: #FEFEFE;
+  --auxie-cloud-white-200: #FCFCFC;
+  --auxie-cloud-white-300: #FAFAFA;
+  --auxie-cloud-white-400: #F6F6F6;
+  --auxie-cloud-white-500: #F2F2F2;
+  --auxie-cloud-white-600: #DADADA;
+  --auxie-cloud-white-700: #919191;
+  --auxie-cloud-white-800: #6D6D6D;
+  --auxie-cloud-white-900: #494949;
+
+  /* Auxie - VividBlue */
+  --auxie-vivid-blue-50: #F3F6FD;
+  --auxie-vivid-blue-100: #E8ECFB;
+  --auxie-vivid-blue-200: #C5D0F5;
+  --auxie-vivid-blue-300: #A3B4EF;
+  --auxie-vivid-blue-400: #5D7CE2;
+  --auxie-vivid-blue-500: #1844D6;
+  --auxie-vivid-blue-600: #163DC1;
+  --auxie-vivid-blue-700: #0E2980;
+  --auxie-vivid-blue-800: #0B1F60;
+  --auxie-vivid-blue-900: #071440;
+
+  /* Auxie - IntenseMint */
+  --auxie-intense-mint-50: #F5FDFA;
+  --auxie-intense-mint-100: #EBFBF5;
+  --auxie-intense-mint-200: #CCF4E6;
+  --auxie-intense-mint-300: #AEEDD6;
+  --auxie-intense-mint-400: #71E0B8;
+  --auxie-intense-mint-500: #34D399;
+  --auxie-intense-mint-600: #2FBE8A;
+  --auxie-intense-mint-700: #1F7F5C;
+  --auxie-intense-mint-800: #175F45;
+  --auxie-intense-mint-900: #103F2E;
+
+  /* Auxie - WarmOrange */
+  --auxie-warm-orange-50: #FFFAF5;
+  --auxie-warm-orange-100: #FFF4EC;
+  --auxie-warm-orange-200: #FEE4CE;
+  --auxie-warm-orange-300: #FDD3B1;
+  --auxie-warm-orange-400: #FCB377;
+  --auxie-warm-orange-500: #FB923C;
+  --auxie-warm-orange-600: #E28336;
+  --auxie-warm-orange-700: #975824;
+  --auxie-warm-orange-800: #71421B;
+  --auxie-warm-orange-900: #4B2C12;
+
+  /* Auxie - VibrantGold */
+  --auxie-vibrant-gold-50: #FFFCF3;
+  --auxie-vibrant-gold-100: #FFFAE8;
+  --auxie-vibrant-gold-200: #FEF2C5;
+  --auxie-vibrant-gold-300: #FDEBA1;
+  --auxie-vibrant-gold-400: #FCDB5B;
+  --auxie-vibrant-gold-500: #FACC15;
+  --auxie-vibrant-gold-600: #E1B813;
+  --auxie-vibrant-gold-700: #967A0D;
+  --auxie-vibrant-gold-800: #715C09;
+  --auxie-vibrant-gold-900: #4B3D06;
+
+  /* Auxie - SoftCrimson */
+  --auxie-soft-crimson-50: #FEF6F6;
+  --auxie-soft-crimson-100: #FDECEC;
+  --auxie-soft-crimson-200: #FBD0D0;
+  --auxie-soft-crimson-300: #F9B4B4;
+  --auxie-soft-crimson-400: #F47C7C;
+  --auxie-soft-crimson-500: #EF4444;
+  --auxie-soft-crimson-600: #D73D3D;
+  --auxie-soft-crimson-700: #8F2929;
+  --auxie-soft-crimson-800: #6C1F1F;
+  --auxie-soft-crimson-900: #481414;
+
+  /* Auxie - SteelGray */
+  --auxie-steel-gray-50: #FAFAFB;
+  --auxie-steel-gray-100: #F4F5F7;
+  --auxie-steel-gray-200: #E4E6EB;
+  --auxie-steel-gray-300: #D4D6DF;
+  --auxie-steel-gray-400: #B4B8C8;
+  --auxie-steel-gray-500: #9499B0;
+  --auxie-steel-gray-600: #858A9E;
+  --auxie-steel-gray-700: #595C6A;
+  --auxie-steel-gray-800: #43454F;
+  --auxie-steel-gray-900: #2C2E35;
+}

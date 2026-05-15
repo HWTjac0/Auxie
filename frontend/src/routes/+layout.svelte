@@ -3,6 +3,7 @@ import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import favicon from '$lib/assets/favicon.svg';
+import "../styles/global.css"
 
 let { children } = $props();
 
