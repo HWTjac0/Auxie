@@ -7,7 +7,7 @@ import (
 
 type User struct {
 	ID                int            `db:"id"`
-	Email             string         `db:"email"`    // NOT NULL
+	Email             string         `db:"email"`
 	Username          string         `db:"username"` // NOT NULL
 	Type              UserType       `db:"type"`
 	SpotifyID         sql.NullString `db:"spotify_id"`
@@ -24,8 +24,10 @@ type User struct {
 
 type Room struct {
 	ID                 int           `db:"id"`
-	Name               string        `db:"name"`    // NOT NULL
-	HostID             int           `db:"host_id"` // NOT NULL
+	Name               string        `db:"name"`      // NOT NULL
+	JoinCode           string        `db:"join_code"` // NOT NULL, UNIQUE
+	Slug               string        `db:"slug"`      // NOT NULL, UNIQUE
+	HostID             int           `db:"host_id"`   // NOT NULL
 	LastPlayedPosition sql.NullInt64 `db:"last_played_position"`
 	CreatedAt          time.Time     `db:"created_at"`
 }
