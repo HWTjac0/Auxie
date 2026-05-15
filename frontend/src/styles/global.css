@@ -131,3 +131,9 @@
   --auxie-steel-gray-800: #43454F;
   --auxie-steel-gray-900: #2C2E35;
 }
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
