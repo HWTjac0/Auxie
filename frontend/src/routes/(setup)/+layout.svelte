@@ -138,12 +138,12 @@
 }
 
 @keyframes slide-out {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-20px); }
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-20px) scale(0.95); }
 }
 
 @keyframes slide-in {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(20px) scale(1.05); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 </style>
