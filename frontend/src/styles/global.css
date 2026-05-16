@@ -134,10 +134,17 @@
 
 @font-face {
   font-family: "Onest";
-  src: url('../../static/fonts/Onest.woff2') format('woff2-variations');
-  src: url('../../static/fonts/Onest.woff2') format('woff2') tech('variations');
+  src: url('/fonts/Onest.woff2') format('woff2');
   font-weight: 100 1000;
   font-stretch: 25% 151%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Sora";
+  src: url('/fonts/Sora.woff2') format('woff2');
+  font-weight: 100 1000;
+  font-stretch: 25% 151%;
+  font-display: swap;
 }
 
 .sora-300 {

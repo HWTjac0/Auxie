@@ -2,7 +2,7 @@
 let { children } = $props();
 </script>
 
-<div class="wrapper sora-500">
+<div class="wrapper"> 
   <div class="background_gradient background_gradient_top"></div>
   <div class="background_gradient background_gradient_bottom"></div>
   <div class="overlay"> </div>
