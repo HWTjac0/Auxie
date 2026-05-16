@@ -132,6 +132,52 @@
   --auxie-steel-gray-900: #2C2E35;
 }
 
+@font-face {
+  font-family: "Onest";
+  src: url('../../static/fonts/Onest.woff2') format('woff2-variations');
+  src: url('../../static/fonts/Onest.woff2') format('woff2') tech('variations');
+  font-weight: 100 1000;
+  font-stretch: 25% 151%;
+}
+
+.sora-300 {
+  font-family: "Sora", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: normal;
+}
+.sora-500 {
+  font-family: "Sora", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-style: normal;
+}
+.sora-800 {
+  font-family: "Sora", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 800;
+  font-style: normal;
+}
+
+.onest-300 {
+  font-family: "Onest", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: normal;
+}
+.onest-500 {
+  font-family: "Onest", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-style: normal;
+}
+.onest-800 {
+  font-family: "Onest", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 800;
+  font-style: normal;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
