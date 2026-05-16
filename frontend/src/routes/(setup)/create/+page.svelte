@@ -35,9 +35,16 @@
     }
 </script>
 
-<h2>Host party</h2>
+<h2 class="sora-800">Host party</h2>
 <form onsubmit={handleCreate}> 
-  <input type="text" placeholder="Username" bind:value={username}>
+
+<style>
+  h2 {
+    font-size: 32px;
+    color: var(--auxie-cloud-white-50);
+    text-align: center;
+  }
+</style>  <input type="text" placeholder="Username" bind:value={username}>
   <input type="text" placeholder="Name of the party" bind:value={roomName}>
   <button type="submit">Create</button>
 </form>

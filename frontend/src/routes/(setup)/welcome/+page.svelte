@@ -6,7 +6,8 @@ const loginWithSpotify = () => {
 };
 </script>
 
-<h1>Welcome to Auxie!</h1>
+<h2 class="sora-800">Welcome to Auxie!</h2>
+<p class="onest-500 subtitle">To begin, you may choose one of the options below:</p>
 
 <div class="login_container">
   <div class="button_group">
@@ -40,7 +41,7 @@ const loginWithSpotify = () => {
 .separator_row {
   font-family: "Onest";
   font-weight:bold;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--auxie-cloud-white-200);
   display: grid;
   grid-template-columns: 30% 1fr 30%;
@@ -52,6 +53,17 @@ const loginWithSpotify = () => {
   height: 3px;
   border-radius: 4px;
   background-color: var(--auxie-deep-navy-500);
+}
+h2 {
+  font-size: 32px;
+  color: var(--auxie-cloud-white-50);
+  text-align: center;
+}
+.subtitle {
+  color: var(--auxie-cloud-white-600);
+  font-size: 16px;
+  margin-bottom: 32px;
+  text-align: center;
 }
 .login_container {
   width: 100%;
