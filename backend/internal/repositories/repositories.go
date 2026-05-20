@@ -12,6 +12,7 @@ type RoomRepository interface {
 	Create(room *models.Room) (int64, error)
 	GetByID(id int) (*models.Room, error)
 	GetActiveByHostID(hostID int) (*models.Room, error)
+	GetByHostId(hostID int) (*models.Room, error)
 	UpdateLastPlayedPosition(roomID int, position int) error
 	Delete(id int) error
 

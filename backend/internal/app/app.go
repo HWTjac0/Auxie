@@ -24,7 +24,7 @@ func NewApp(db *database.DB) *App {
 		TrackRepo: trackRepo,
 		RoomRepo:  roomRepo,
 
-		UserHandler: handlers.NewUserHandler(userRepo),
+		UserHandler: handlers.NewUserHandler(userRepo, roomRepo),
 		RoomHandler: handlers.NewRoomHandler(roomRepo, userRepo),
 	}
 }

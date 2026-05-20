@@ -16,7 +16,7 @@ func NewRoomSqliteRepo(db *database.DB) *RoomSqliteRepo {
 
 func (r *RoomSqliteRepo) Create(room *models.Room) (int64, error) {
 	query := `INSERT INTO rooms (name, join_code, slug, host_id, created_at) VALUES (?, ?, ?, ?, ?)`
-	
+
 	result, err := r.db.Exec(query, room.Name, room.JoinCode, room.Slug, room.HostID, room.CreatedAt)
 	if err != nil {
 		return 0, err
@@ -33,6 +33,16 @@ func (r *RoomSqliteRepo) GetByID(id int) (*models.Room, error) {
 func (r *RoomSqliteRepo) GetActiveByHostID(hostID int) (*models.Room, error) {
 	log.Println("TODO: implement RoomSqliteRepo.GetActiveByHostID")
 	return nil, nil
+}
+
+func (r *RoomSqliteRepo) GetByHostId(hostID int) (*models.Room, error) {
+	var room models.Room
+	query := `SELECT id, name, join_code, slug, host_id, last_played_position, created_at FROM rooms WHERE host_id = ? LIMIT 1`
+	err := r.db.Get(&room, query, hostID)
+	if err != nil {
+		return nil, err
+	}
+	return &room, nil
 }
 
 func (r *RoomSqliteRepo) UpdateLastPlayedPosition(roomID int, position int) error {

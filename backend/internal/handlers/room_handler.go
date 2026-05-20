@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -70,6 +71,12 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create guest user"})
 		return
 	}
+
+	session := sessions.Default(c)
+	session.Set("user_name", req.Username)
+	session.Set("user_id", guestID)
+	session.Set("user_image", "")
+	session.Save()
 
 	joinCode := generateJoinCode(6)
 	slug := generateSlug(req.RoomName, joinCode)
