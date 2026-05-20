@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="assets/logo.png" alt="Auxie" width="45" align="center" /> Auxie
+  <img src="frontend/static/assets/logo.png" alt="Auxie" width="45" align="center" /> Auxie
 </h1>
 
 <p align="center">
