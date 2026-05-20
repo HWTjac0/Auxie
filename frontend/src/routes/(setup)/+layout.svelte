@@ -1,18 +1,18 @@
 <script lang="ts">
-  import { onNavigate } from '$app/navigation';
+import { onNavigate } from "$app/navigation";
 
-  let { children } = $props();
+let { children } = $props();
 
-  onNavigate((navigation) => {
-    if (!document.startViewTransition) return;
+onNavigate((navigation) => {
+  if (!document.startViewTransition) return;
 
-    return new Promise((resolve) => {
-      document.startViewTransition(async () => {
-        resolve();
-        await navigation.complete;
-      });
+  return new Promise((resolve) => {
+    document.startViewTransition(async () => {
+      resolve();
+      await navigation.complete;
     });
   });
+});
 </script>
 
 <div class="wrapper"> 
@@ -33,6 +33,17 @@
 </div>
 
 <style>
+  .setup_container :global(h2) {
+    font-size: 32px;
+    color: var(--auxie-cloud-white-50);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+.setup_container :global(form) {
+  display: grid;
+  row-gap: 10px;
+  }
 .header {
   position: absolute;
   top: 0;

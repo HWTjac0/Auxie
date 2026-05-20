@@ -1,37 +1,40 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+import type { Snippet } from "svelte";
 
-  interface Props {
-    href?: string;
-    onclick?: () => void;
-    bgColor?: string;
-    shadowColor?: string;
-    innerShadow?: boolean;
-    outerShadow?: boolean;
-    class?: string;
-    children: Snippet;
-  }
+interface Props {
+  href?: string;
+  onclick?: () => void;
+  bgColor?: string;
+  shadowColor?: string;
+  innerShadow?: boolean;
+  outerShadow?: boolean;
+  class?: string;
+  fontSize?: string;
+  children: Snippet;
+}
 
-  let {
-    href,
-    onclick,
-    bgColor = 'var(--auxie-razzmatazz-500)',
-    shadowColor = 'var(--auxie-razzmatazz-700)',
-    innerShadow = true,
-    outerShadow = true,
-    class: className = '',
-    children
-  }: Props = $props();
+let {
+  href,
+  onclick,
+  bgColor = "var(--auxie-razzmatazz-500)",
+  shadowColor = "var(--auxie-razzmatazz-700)",
+  innerShadow = true,
+  outerShadow = true,
+  class: className = "",
+  fontSize,
+  children,
+}: Props = $props();
 
-  const isLink = !!href;
+const isLink = () => !!href;
 </script>
 
-{#if isLink}
+{#if isLink()}
   <a 
     {href} 
     class="btn {className}" 
     style:--bg={bgColor} 
     style:--shadow={shadowColor}
+    style:--font-size={fontSize}
     class:has-inner={innerShadow}
     class:has-outer={outerShadow}
   >
@@ -43,6 +46,7 @@
     class="btn {className}" 
     style:--bg={bgColor} 
     style:--shadow={shadowColor}
+    style:--font-size={fontSize}
     class:has-inner={innerShadow}
     class:has-outer={outerShadow}
   >
@@ -57,7 +61,7 @@
     border-radius: 25px;
     background-color: var(--bg);
     text-align: center;
-    font-size: 16px;
+    font-size: var(--font-size, 16px);
     font-weight: bold;
     color: var(--auxie-cloud-white-50);
     text-decoration: none;
@@ -72,6 +76,10 @@
 
   .btn:active {
     transform: scale(0.98);
+  }
+
+  .btn:hover {
+    transform: scale(1.02);
   }
 
   .has-inner {
