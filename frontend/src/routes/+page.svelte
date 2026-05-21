@@ -68,6 +68,7 @@ onMount(async () => {
             <img src={user.image} alt="Avatar" />
         {/if}
         <h1>Witaj, {user?.name}</h1>
+        <a href="/api/v1/user/logout">Logout</a>
         {#await roomsRes}
          <p>Loading rooms hosted by user...</p> 
         {:then roomsList} 

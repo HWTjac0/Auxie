@@ -64,3 +64,10 @@ func (h *UserHandler) GetUserRooms(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"rooms": []interface{}{room}})
 }
+
+func (h *UserHandler) Logout(c *gin.Context) {
+	session := sessions.Default(c)
+	session.Clear()
+	session.Save()
+	c.Redirect(http.StatusTemporaryRedirect, "/welcome")
+}
