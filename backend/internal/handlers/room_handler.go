@@ -152,6 +152,27 @@ func (h *UserHandler) JoinRoom(c *gin.Context) {
 		"user_id": guestID,
 	})
 }
+
+func (h *RoomHandler) GetRoomDetails(c *gin.Context) {
+	slug := c.Param("slug")
+	room, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	users, err := h.userRepo.GetUsersInRoom(room.ID, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while getting users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"room":  room,
+		"users": users,
+	})
+}
+
 func (h *RoomHandler) CheckIfHostHasRoom(host_id int) bool {
 	return false
 }

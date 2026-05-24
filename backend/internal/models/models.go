@@ -6,20 +6,22 @@ import (
 )
 
 type User struct {
-	ID                int            `db:"id"`
-	Email             sql.NullString `db:"email"`
-	Username          string         `db:"username"` // NOT NULL
-	Type              UserType       `db:"type"`
-	SpotifyID         sql.NullString `db:"spotify_id"`
-	SpotifyAuthKey    sql.NullString `db:"spotify_auth_key"`
-	SpotifyRefreshKey sql.NullString `db:"spotify_refresh_key"`
-	SoundCloudID      sql.NullString `db:"soundcloud_id"`
-	TidalID           sql.NullString `db:"tidal_id"`
-	SoundCloudKey     sql.NullString `db:"soundcloud_key"`
-	TidalKey          sql.NullString `db:"tidal_key"`
-	CurrentRoomID     sql.NullInt64  `db:"current_room_id"`
-	CurrentRole       UserRole       `db:"current_role"`
-	CreatedAt         time.Time      `db:"created_at"`
+	ID                    int            `db:"id"`
+	Email                 sql.NullString `db:"email"`
+	Username              string         `db:"username"` // NOT NULL
+	Type                  UserType       `db:"type"`
+	SpotifyID             sql.NullString `db:"spotify_id"`
+	SpotifyAuthKey        sql.NullString `db:"spotify_auth_key"`
+	SpotifyRefreshKey     sql.NullString `db:"spotify_refresh_key"`
+	SpotifyTokenExpiresAt sql.NullTime   `db:"spotify_token_expires_at"`
+	SoundCloudID          sql.NullString `db:"soundcloud_id"`
+	TidalID               sql.NullString `db:"tidal_id"`
+	SoundCloudKey         sql.NullString `db:"soundcloud_key"`
+	TidalKey              sql.NullString `db:"tidal_key"`
+	CurrentRoomID         sql.NullInt64  `db:"current_room_id"`
+	CurrentRole           UserRole       `db:"current_role"`
+	CreatedAt             time.Time      `db:"created_at"`
+	UpdatedAt             time.Time      `db:"updated_at"`
 }
 
 type Room struct {

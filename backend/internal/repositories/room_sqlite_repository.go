@@ -37,7 +37,7 @@ func (r *RoomSqliteRepo) GetActiveByHostID(hostID int) (*models.Room, error) {
 
 func (r *RoomSqliteRepo) GetByHostId(hostID int) (*models.Room, error) {
 	var room models.Room
-	query := `SELECT id, name, join_code, slug, host_id, last_played_position, created_at FROM rooms WHERE host_id = ? LIMIT 1`
+	query := `SELECT * FROM rooms WHERE host_id = ? LIMIT 1`
 	err := r.db.Get(&room, query, hostID)
 	if err != nil {
 		return nil, err
@@ -47,9 +47,17 @@ func (r *RoomSqliteRepo) GetByHostId(hostID int) (*models.Room, error) {
 
 func (r *RoomSqliteRepo) GetByJoinCode(code string) (*models.Room, error) {
 	var room models.Room
-	query := `SELECT id, name, join_code, slug, host_id, last_played_position, created_at 
-						FROM rooms WHERE join_code = ? LIMIT 1`
+	query := `SELECT * FROM rooms WHERE join_code = ? LIMIT 1`
 	err := r.db.Get(&room, query, code)
+	if err != nil {
+		return nil, err
+	}
+	return &room, nil
+}
+func (r *RoomSqliteRepo) GetBySlug(slug string) (*models.Room, error) {
+	var room models.Room
+	query := `SELECT * FROM rooms WHERE slug = ? LIMIT 1`
+	err := r.db.Get(&room, query, slug)
 	if err != nil {
 		return nil, err
 	}

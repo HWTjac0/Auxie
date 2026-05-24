@@ -1,10 +1,20 @@
 import type { PageLoad } from "./$types";
 
-export const load: PageLoad = async ({ params }) => {
-    // Tutaj w przyszłości dodasz pobieranie danych o pokoju z backendu po slugu
-    // const res = await fetch(`/api/v1/room/${params.slug}`);
-    
+type User = {
+  Username: string;
+  CurrentRole: string;
+}
+
+export const load: PageLoad = async ({ params, fetch }) => {
+  const res = await fetch(`/api/v1/room/${params.slug}`)
+  const data = await res.json()
+  if (res.ok) {
     return {
-        slug: params.slug
-    };
+      slug: params.slug,
+      room: data.room,
+      users: data.users as Array<User>,
+    }
+  } else {
+    return { slug: params.slug }
+  }
 };

@@ -2,10 +2,17 @@ package repositories
 
 import "auxie/backend/internal/models"
 
+type UserFilter struct {
+	Role   *string
+	Type   *models.UserType
+	Fields []string
+}
+
 type UserRepository interface {
 	GetByEmail(email string) (*models.User, error)
 	Create(user *models.User) (int64, error)
 	UpdateRoom(userId int, roomId int, role *string) error
+	GetUsersInRoom(roomId int, filter *UserFilter) ([]models.User, error)
 }
 
 type RoomRepository interface {
@@ -14,6 +21,7 @@ type RoomRepository interface {
 	GetActiveByHostID(hostID int) (*models.Room, error)
 	GetByHostId(hostID int) (*models.Room, error)
 	GetByJoinCode(code string) (*models.Room, error)
+	GetBySlug(slug string) (*models.Room, error)
 	UpdateLastPlayedPosition(roomID int, position int) error
 	Delete(id int) error
 
