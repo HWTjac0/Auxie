@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onNavigate } from "$app/navigation";
+import { page } from "$app/stores";
 
 let { children } = $props();
 
@@ -13,9 +14,14 @@ onNavigate((navigation) => {
     });
   });
 });
+
+let pageType = $derived(
+  $page.url.pathname.includes('/join') ? 'join' :
+  $page.url.pathname.includes('/create') ? 'create' : 'welcome'
+);
 </script>
 
-<div class="wrapper"> 
+<div class="wrapper {pageType}"> 
   <div class="background_gradient background_gradient_top"></div>
   <div class="background_gradient background_gradient_bottom"></div>
   <div class="overlay"> </div>
@@ -87,14 +93,14 @@ onNavigate((navigation) => {
 .background_gradient_top {
   top: -30%;
   left: -30%;
-  background: linear-gradient(to top right,  var(--auxie-electric-purple-600), var(--auxie-intense-mint-500));
+  background: var(--bg-gradient-top);
   animation: float-top 15s ease-in-out infinite alternate;
 }
 
 .background_gradient_bottom {
   bottom: -30%;
   right: -30%;
-  background: linear-gradient(to top right, var(--auxie-razzmatazz-600), var(--auxie-electric-purple-300));
+  background: var(--bg-gradient-bottom);
   animation: float-bottom 20s ease-in-out infinite alternate;
 }
 
@@ -117,6 +123,20 @@ onNavigate((navigation) => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+
+  /* Default / Welcome Gradient Colors */
+  --bg-gradient-top: linear-gradient(to top right, var(--auxie-electric-purple-600), var(--auxie-intense-mint-500));
+  --bg-gradient-bottom: linear-gradient(to top right, var(--auxie-razzmatazz-600), var(--auxie-electric-purple-300));
+}
+
+.wrapper.join {
+  --bg-gradient-top: linear-gradient(to top right, var(--auxie-vivid-blue-600), var(--auxie-intense-mint-400));
+  --bg-gradient-bottom: linear-gradient(to top right, var(--auxie-electric-purple-600), var(--auxie-vivid-blue-300));
+}
+
+.wrapper.create {
+  --bg-gradient-top: linear-gradient(to top right, var(--auxie-warm-orange-600), var(--auxie-vibrant-gold-400));
+  --bg-gradient-bottom: linear-gradient(to top right, var(--auxie-razzmatazz-600), var(--auxie-warm-orange-300));
 }
 
 .setup_container {
