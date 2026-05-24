@@ -45,6 +45,17 @@ func (r *RoomSqliteRepo) GetByHostId(hostID int) (*models.Room, error) {
 	return &room, nil
 }
 
+func (r *RoomSqliteRepo) GetByJoinCode(code string) (*models.Room, error) {
+	var room models.Room
+	query := `SELECT id, name, join_code, slug, host_id, last_played_position, created_at 
+						FROM rooms WHERE join_code = ? LIMIT 1`
+	err := r.db.Get(&room, query, code)
+	if err != nil {
+		return nil, err
+	}
+	return &room, nil
+}
+
 func (r *RoomSqliteRepo) UpdateLastPlayedPosition(roomID int, position int) error {
 	log.Println("TODO: implement RoomSqliteRepo.UpdateLastPlayedPosition")
 	return nil

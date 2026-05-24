@@ -66,6 +66,7 @@ func main() {
 			room := v1.Group("/room")
 			room.GET("/random_name", app.RoomHandler.GetRandomRoomName)
 			room.POST("/create", app.RoomHandler.CreateRoom)
+			room.POST("/join", app.UserHandler.JoinRoom)
 
 			user := v1.Group("/user")
 			user.GET("/random_name", app.UserHandler.GetRandomUserName)

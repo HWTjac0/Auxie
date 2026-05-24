@@ -104,6 +104,54 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 	})
 }
 
+type JoinRoomRequest struct {
+	JoinCode string `json:"join_code" binding:"required"`
+	UserName string `json:"username" binding:"required"`
+}
+
+func (h *UserHandler) JoinRoom(c *gin.Context) {
+	var req JoinRoomRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	room, err := h.roomRepo.GetByJoinCode(req.JoinCode)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	guest := &models.User{
+		Username:  req.UserName,
+		Type:      models.UserTypeGuest,
+		CreatedAt: time.Now(),
+	}
+
+	guestID, err := h.userRepo.Create(guest)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create guest user"})
+		return
+	}
+
+	role := "Guest"
+	err = h.userRepo.UpdateRoom(int(guestID), room.ID, &role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to join room"})
+		return
+	}
+
+	session := sessions.Default(c)
+	session.Set("user_name", req.UserName)
+	session.Set("user_id", guestID)
+	session.Set("user_image", "")
+	session.Save()
+
+	c.JSON(http.StatusOK, gin.H{
+		"room":    room,
+		"user_id": guestID,
+	})
+}
 func (h *RoomHandler) CheckIfHostHasRoom(host_id int) bool {
 	return false
 }
