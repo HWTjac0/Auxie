@@ -1,35 +1,43 @@
 <script lang="ts">
-import type { Snippet } from "svelte";
+  import type { Snippet } from "svelte";
 
-interface Props {
-  size?: number | string;
-  strokeWidth?: number | string;
-  color?: string;
-  class?: string;
-  children?: Snippet;
-  [key: string]: any;
-}
+  interface Props {
+    size?: number | string;
+    color?: string;
+    class?: string;
+    children?: Snippet;
+    [key: string]: any;
+  }
 
-let {
-  size = 24,
-  strokeWidth = 1.5,
-  color = "currentColor",
-  class: className = "",
-  children,
-  ...restProps
-}: Props = $props();
+  let {
+    size = 24,
+    color = "currentColor",
+    class: className = "",
+    children,
+    ...restProps
+  }: Props = $props();
+
+  let cssSize = $derived(typeof size === "number" ? `${size}px` : size);
 </script>
 
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  fill="none"
-  viewBox="0 0 24 24"
-  stroke={color}
-  stroke-width={strokeWidth}
-  width={size}
-  height={size}
-  class={className}
+<span
+  class="inline-icon {className}"
+  style:width={cssSize}
+  style:height={cssSize}
+  style:color={color}
   {...restProps}
 >
   {@render children?.()}
-</svg>
+</span>
+
+<style>
+  .inline-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .inline-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+</style>
