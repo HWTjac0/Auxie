@@ -42,7 +42,7 @@ func (r *UserSqliteRepo) UpdateRoom(userId int, roomId int, role *string) error 
 func (r *UserSqliteRepo) GetUsersInRoom(roomId int, filter *UserFilter) ([]models.User, error) {
 	var users []models.User
 
-	selectFields := "username, type"
+	selectFields := "username, type, current_role"
 	if filter != nil && len(filter.Fields) > 0 {
 		allowedFields := map[string]bool{
 			"id": true, "email": true, "username": true, "type": true,
