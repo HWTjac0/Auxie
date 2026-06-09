@@ -4,12 +4,14 @@ import EllipsisVert from "../../../components/icons/EllipsisVert.svelte";
 import Invite from "../../../components/icons/Invite.svelte";
 import InviteDialog from "../../../components/InviteDialog.svelte";
 import type { PageProps } from "./$types";
-import TextInput from "../../../components/TextInput.svelte";
 import SettingsPopover from "../../../components/SettingsPopover.svelte";
 import UsersTab from "../../../components/UsersTab.svelte";
 import QueueTab from "../../../components/QueueTab.svelte";
 import SearchDialog from "../../../components/SearchDialog.svelte";
 import Plus from "../../../components/icons/Plus.svelte";
+import List from "../../../components/icons/List.svelte";
+import Users from "../../../components/icons/Users.svelte";
+import type { Component } from "svelte";
 
 let { data }: PageProps = $props();
 
@@ -17,12 +19,23 @@ let inviteDialog: any = $state(null);
 let searchDialog: any = $state(null);
 let searchQuery: string = $state("");
 
-let tabs = ["Queue", "Users"];
+type Tab = {
+  label: string;
+  icon: Component<any>;
+};
+let tabs: Array<Tab> = [
+  { label: "Queue", icon: List },
+  { label: "Users", icon: Users },
+];
 let activeTabIdx = $state(0);
 </script>
 
-<div>
-  <nav>
+<div class="room_wrapper">
+  <div class="background_gradient background_gradient_top"></div>
+  <div class="background_gradient background_gradient_bottom"></div>
+
+  <div class="content_wrapper">
+    <nav>
     <div class="nav_container">
       <a href="/" class="back-link">
         <ArrowLeft color="white" />
@@ -49,12 +62,14 @@ let activeTabIdx = $state(0);
     <div class="main_content">
       <div class="tabs-container">
         <div class="tabs-header">
-          {#each tabs as tabLabel, tabIdx}
+          {#each tabs as tab, tabIdx}
+            {@const TabIcon = tab.icon}
             <button 
               class="tab-button onest-500 {tabIdx === activeTabIdx ? 'active' : ''}" 
               onclick={() => activeTabIdx = tabIdx}
             >
-              {tabLabel}
+              <TabIcon color={tabIdx === activeTabIdx ? "white" : "currentColor"} />
+              {tab.label}
             </button>
           {/each}
         </div>
@@ -72,12 +87,78 @@ let activeTabIdx = $state(0);
   <InviteDialog bind:this={inviteDialog} slug={data.slug} />
   <SearchDialog bind:this={searchDialog} bind:searchQuery={searchQuery} />
   
-  <button class="fab-add-song onest-500" onclick={() => searchDialog?.show()}>
-    <Plus/> Add Song
-  </button>
+    <button class="fab-add-song onest-500" onclick={() => searchDialog?.show()}>
+      <Plus/> Add Song
+    </button>
+  </div>
 </div>
 
 <style>
+  .room_wrapper {
+    background-color: var(--auxie-deep-navy-900);
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .content_wrapper {
+    position: relative;
+    z-index: 10;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .background_gradient {
+    position: absolute;
+    z-index: 0;
+    width: 60%;
+    height: 60%;
+    filter: blur(150px);
+    border-radius: 100%;
+    opacity: 0.15;
+    pointer-events: none;
+  }
+  .background_gradient_top {
+    top: -20%;
+    left: -20%;
+    background: linear-gradient(to top right, var(--auxie-electric-purple-600), var(--auxie-intense-mint-500));
+    animation: float-top 20s ease-in-out infinite alternate;
+  }
+  .background_gradient_bottom {
+    bottom: -20%;
+    right: -20%;
+    background: linear-gradient(to top right, var(--auxie-razzmatazz-600), var(--auxie-vivid-blue-500));
+    animation: float-bottom 25s ease-in-out infinite alternate;
+  }
+  @keyframes float-top {
+    0% {
+      transform: translate(0, 0) scale(1) rotate(0deg);
+      filter: blur(150px) hue-rotate(0deg);
+    }
+    50% {
+      transform: translate(5%, 5%) scale(1.1) rotate(15deg);
+      filter: blur(150px) hue-rotate(30deg);
+    }
+    100% {
+      transform: translate(-5%, 5%) scale(0.9) rotate(-10deg);
+      filter: blur(150px) hue-rotate(-15deg);
+    }
+  }
+  @keyframes float-bottom {
+    0% {
+      transform: translate(0, 0) scale(1) rotate(0deg);
+      filter: blur(150px) hue-rotate(0deg);
+    }
+    50% {
+      transform: translate(-5%, -5%) scale(1.1) rotate(-20deg);
+      filter: blur(150px) hue-rotate(-30deg);
+    }
+    100% {
+      transform: translate(5%, -5%) scale(0.95) rotate(10deg);
+      filter: blur(150px) hue-rotate(15deg);
+    }
+  }
   nav {
     padding: 5px;
     display: flex;
@@ -156,6 +237,10 @@ let activeTabIdx = $state(0);
   }
   .tab-button {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     background: transparent;
     border: none;
     padding: 12px 0;
