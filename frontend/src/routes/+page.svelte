@@ -94,7 +94,7 @@ onMount(async () => {
           <h2 class="sora-800">
             Witaj, {user.spotify_name ? user.spotify_name : user?.name}
           </h2>
-          <a href="/api/v1/user/logout" class="logout-link">Log out</a>
+          <a href="/api/v1/user/logout" class="logout-link onest-500">Log out</a>
         </div>
 
         <div class="rooms-section">
@@ -311,6 +311,9 @@ onMount(async () => {
     font-size: 14px;
     text-decoration: underline;
   }
+  .rooms-section {
+    font-family: "Onest";
+    }
   .rooms-list {
     list-style: none;
     padding: 0;

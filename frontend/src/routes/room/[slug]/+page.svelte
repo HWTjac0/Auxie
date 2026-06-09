@@ -9,6 +9,7 @@ import SettingsPopover from "../../../components/SettingsPopover.svelte";
 import UsersTab from "../../../components/UsersTab.svelte";
 import QueueTab from "../../../components/QueueTab.svelte";
 import SearchDialog from "../../../components/SearchDialog.svelte";
+import Plus from "../../../components/icons/Plus.svelte";
 
 let { data }: PageProps = $props();
 
@@ -72,7 +73,7 @@ let activeTabIdx = $state(0);
   <SearchDialog bind:this={searchDialog} bind:searchQuery={searchQuery} />
   
   <button class="fab-add-song onest-500" onclick={() => searchDialog?.show()}>
-    + Add Song
+    <Plus/> Add Song
   </button>
 </div>
 
@@ -184,6 +185,10 @@ let activeTabIdx = $state(0);
     position: fixed;
     bottom: 30px;
     left: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
     transform: translateX(-50%);
     background: linear-gradient(135deg, var(--auxie-intense-mint-500), var(--auxie-vivid-blue-500));
     color: var(--auxie-deep-navy-900);

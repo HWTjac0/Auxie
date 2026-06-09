@@ -1,4 +1,6 @@
 <script lang="ts">
+import MusicalNote from "./icons/MusicalNote.svelte";
+
 // Tutaj w przyszłości można przekazać listę utworów w kolejce
 </script>
 
@@ -8,7 +10,9 @@
   </div>
   
   <div class="empty-state">
-    <div class="empty-icon">🎵</div>
+    <div class="empty-icon">
+    <MusicalNote size={40}/>
+    </div>
     <h3 class="onest-500">Queue is empty</h3>
     <p class="onest-300">Search for desired track to be played below and add it to the queue!</p>
   </div>
@@ -49,7 +53,6 @@
   }
 
   .empty-icon {
-    font-size: 40px;
     margin-bottom: 10px;
     opacity: 0.5;
     filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
