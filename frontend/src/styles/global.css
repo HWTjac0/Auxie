@@ -139,6 +139,7 @@
   font-stretch: 25% 151%;
   font-display: swap;
 }
+
 @font-face {
   font-family: "Sora";
   src: url('/fonts/Sora.woff2') format('woff2');
@@ -153,12 +154,14 @@
   font-weight: 300;
   font-style: normal;
 }
+
 .sora-500 {
   font-family: "Sora", sans-serif;
   font-optical-sizing: auto;
   font-weight: 500;
   font-style: normal;
 }
+
 .sora-800 {
   font-family: "Sora", sans-serif;
   font-optical-sizing: auto;
@@ -172,12 +175,14 @@
   font-weight: 300;
   font-style: normal;
 }
+
 .onest-500 {
   font-family: "Onest", sans-serif;
   font-optical-sizing: auto;
   font-weight: 500;
   font-style: normal;
 }
+
 .onest-800 {
   font-family: "Onest", sans-serif;
   font-optical-sizing: auto;

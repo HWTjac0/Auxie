@@ -75,7 +75,9 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Set("user_name", req.Username)
 	session.Set("user_id", guestID)
-	session.Set("user_image", "")
+	if img := session.Get("user_image"); img == nil || img == "" {
+		session.Set("user_image", "")
+	}
 	session.Save()
 
 	joinCode := generateJoinCode(6)
@@ -144,7 +146,9 @@ func (h *UserHandler) JoinRoom(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Set("user_name", req.UserName)
 	session.Set("user_id", guestID)
-	session.Set("user_image", "")
+	if img := session.Get("user_image"); img == nil || img == "" {
+		session.Set("user_image", "")
+	}
 	session.Save()
 
 	c.JSON(http.StatusOK, gin.H{
