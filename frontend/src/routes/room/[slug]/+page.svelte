@@ -8,16 +8,13 @@ import TextInput from "../../../components/TextInput.svelte";
 import SettingsPopover from "../../../components/SettingsPopover.svelte";
 import UsersTab from "../../../components/UsersTab.svelte";
 import QueueTab from "../../../components/QueueTab.svelte";
+import SearchDialog from "../../../components/SearchDialog.svelte";
 
 let { data }: PageProps = $props();
 
 let inviteDialog: any = $state(null);
+let searchDialog: any = $state(null);
 let searchQuery: string = $state("");
-
-type Tab = {
-  id: number;
-  label: string;
-};
 
 let tabs = ["Queue", "Users"];
 let activeTabIdx = $state(0);
@@ -48,56 +45,38 @@ let activeTabIdx = $state(0);
     </div>
   </nav>
   <main>
-    <div class="tabs-container">
-      <div class="tabs-header">
-        {#each tabs as tabLabel, tabIdx}
-          <button 
-            class="tab-button onest-500 {tabIdx === activeTabIdx ? 'active' : ''}" 
-            onclick={() => activeTabIdx = tabIdx}
-          >
-            {tabLabel}
-          </button>
-        {/each}
-      </div>
-      
-      <div class="tab-content">
-        {#if activeTabIdx === 0}
-          <QueueTab />
-        {:else if activeTabIdx === 1}
-          <UsersTab users={data.users} />
-        {/if}
+    <div class="main_content">
+      <div class="tabs-container">
+        <div class="tabs-header">
+          {#each tabs as tabLabel, tabIdx}
+            <button 
+              class="tab-button onest-500 {tabIdx === activeTabIdx ? 'active' : ''}" 
+              onclick={() => activeTabIdx = tabIdx}
+            >
+              {tabLabel}
+            </button>
+          {/each}
+        </div>
+        
+        <div class="tab-content">
+          {#if activeTabIdx === 0}
+            <QueueTab />
+          {:else if activeTabIdx === 1}
+            <UsersTab users={data.users!} />
+          {/if}
+        </div>
       </div>
     </div>
   </main>
   <InviteDialog bind:this={inviteDialog} slug={data.slug} />
-</div>
-<div class="search-section">
-  <TextInput bind:value={searchQuery} placeholder="Wpisz nazwę utworu..." />
-  <div class="search-results">
-    <p class="empty-state">Brak dopasowanych utworów</p>
-  </div>
+  <SearchDialog bind:this={searchDialog} bind:searchQuery={searchQuery} />
+  
+  <button class="fab-add-song onest-500" onclick={() => searchDialog?.show()}>
+    + Add Song
+  </button>
 </div>
 
 <style>
-  .search-section {
-    margin: 20px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .search-results {
-    background-color: var(--auxie-deep-navy-700);
-    border-radius: 10px;
-    padding: 15px;
-    min-height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .empty-state {
-    color: var(--auxie-cloud-white-600);
-    font-family: "Onest", sans-serif;
-  }
   nav {
     padding: 5px;
     display: flex;
@@ -154,6 +133,12 @@ let activeTabIdx = $state(0);
   main {
     padding: 15px;
   }
+  .main_content {
+    margin: 0 auto;
+    display: grid;
+    width: 100%;
+    max-width: 600px;
+  }
   .tabs-container {
     display: flex;
     flex-direction: column;
@@ -194,5 +179,26 @@ let activeTabIdx = $state(0);
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  .fab-add-song {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--auxie-intense-mint-500), var(--auxie-vivid-blue-500));
+    color: var(--auxie-deep-navy-900);
+    border: none;
+    padding: 14px 28px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 100;
+  }
+  .fab-add-song:hover {
+    transform: translateX(-50%) translateY(-3px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
   }
 </style>

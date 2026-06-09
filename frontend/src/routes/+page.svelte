@@ -1,78 +1,78 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
-  import { onMount } from "svelte";
-  import InviteDialog from "../components/InviteDialog.svelte";
-  import Button from "../components/Button.svelte";
+import { goto } from "$app/navigation";
+import { onMount } from "svelte";
+import InviteDialog from "../components/InviteDialog.svelte";
+import Button from "../components/Button.svelte";
 
-  type User = {
-    name: string;
-    id: string;
-    image: string;
-    spotify_name?: string;
-  };
+type User = {
+  name: string;
+  id: string;
+  image: string;
+  spotify_name?: string;
+};
 
-  type Room = {
-    name: string;
-    code: string;
-    slug: string;
-  };
+type Room = {
+  name: string;
+  code: string;
+  slug: string;
+};
 
-  let activeSlug = $state("");
-  let inviteDialog: any = $state(null);
+let activeSlug = $state("");
+let inviteDialog: any = $state(null);
 
-  const loginWithSpotify = () => {
-    window.location.href = "http://127.0.0.1:8080/api/v1/auth/spotify/login";
-  };
+const loginWithSpotify = () => {
+  window.location.href = "http://127.0.0.1:8080/api/v1/auth/spotify/login";
+};
 
-  function showQRCode(slug: string) {
-    activeSlug = slug;
-    inviteDialog?.show();
-  }
+function showQRCode(slug: string) {
+  activeSlug = slug;
+  inviteDialog?.show();
+}
 
-  async function getRooms() {
-    try {
-      const res = await fetch("/api/v1/user/rooms");
-      if (res.ok) {
-        const data = await res.json();
-        const rawRooms = data?.rooms;
-        if (rawRooms && Array.isArray(rawRooms)) {
-          return rawRooms.map((room: any) => {
-            return {
-              name: room.Name || room.name,
-              slug: room.Slug || room.slug,
-              code: room.JoinCode || room.join_code || room.code,
-            };
-          });
-        }
+async function getRooms() {
+  try {
+    const res = await fetch("/api/v1/user/rooms");
+    if (res.ok) {
+      const data = await res.json();
+      const rawRooms = data?.rooms;
+      if (rawRooms && Array.isArray(rawRooms)) {
+        return rawRooms.map((room: any) => {
+          return {
+            name: room.Name || room.name,
+            slug: room.Slug || room.slug,
+            code: room.JoinCode || room.join_code || room.code,
+          };
+        });
       }
-    } catch (err) {
-      console.error("Error fetching rooms:", err);
     }
-    return null;
+  } catch (err) {
+    console.error("Error fetching rooms:", err);
   }
+  return null;
+}
 
-  let user: User | null = $state(null);
-  let loading = $state(true);
-  let roomsRes = $state<Promise<Room[] | null>>(Promise.resolve(null));
+let user: User | null = $state(null);
+let loading = $state(true);
+let roomsRes = $state<Promise<Room[] | null>>(Promise.resolve(null));
 
-  onMount(async () => {
-    try {
-      const meRes = await fetch("/api/v1/auth/me", {
-        credentials: "include",
-      });
+onMount(async () => {
+  try {
+    const meRes = await fetch("/api/v1/auth/me", {
+      credentials: "include",
+    });
 
-      if (meRes.ok) {
-        user = await meRes.json();
-        roomsRes = getRooms();
-      } else {
-        goto("/welcome");
-      }
-    } catch (e) {
+    if (meRes.ok) {
+      user = await meRes.json();
+      roomsRes = getRooms();
+    } else {
       goto("/welcome");
-    } finally {
-      loading = false;
     }
-  });
+  } catch (e) {
+    goto("/welcome");
+  } finally {
+    loading = false;
+  }
+});
 </script>
 
 <div class="page-wrapper">
@@ -94,7 +94,7 @@
           <h2 class="sora-800">
             Witaj, {user.spotify_name ? user.spotify_name : user?.name}
           </h2>
-          <a href="/api/v1/user/logout" class="logout-link">Wyloguj się</a>
+          <a href="/api/v1/user/logout" class="logout-link">Log out</a>
         </div>
 
         <div class="rooms-section">
@@ -102,10 +102,10 @@
             class="onest-500 subtitle"
             style="text-align: left; margin-bottom: 10px;"
           >
-            Twoje pokoje:
+            Your rooms:
           </p>
           {#await roomsRes}
-            <p class="subtitle">Ładowanie pokojów...</p>
+            <p class="subtitle">Loading rooms...</p>
           {:then roomsList}
             {#if roomsList && roomsList.length > 0}
               <ul class="rooms-list">
@@ -115,7 +115,7 @@
                     <span class="room-code">#{room.code}</span>
                     <div class="room-actions">
                       <a href="/room/{room.slug}" class="room-btn enter-btn"
-                        >Wejdź</a
+                        >Enter</a
                       >
                       <button
                         class="room-btn qr-btn"
@@ -127,7 +127,7 @@
               </ul>
             {:else}
               <p class="subtitle" style="text-align: left;">
-                Nie masz jeszcze żadnych pokojów.
+              You haven't created any room yet.
               </p>
             {/if}
           {/await}

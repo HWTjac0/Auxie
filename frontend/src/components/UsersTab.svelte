@@ -1,5 +1,7 @@
 <script lang="ts">
-let { users = [] }: { users: any[] } = $props();
+import type { User } from "../routes/room/[slug]/+page";
+
+let { users = [] }: { users: User[] } = $props();
 </script>
 
 <div class="users-tab">

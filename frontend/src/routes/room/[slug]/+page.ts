@@ -1,11 +1,11 @@
 import type { PageLoad } from "./$types";
 
-type User = {
+export type User = {
   Username: string;
   CurrentRole: string;
 }
 
-type Room = {
+export type Room = {
   ID: number;
   Name: string;
   JoinCode: string;
