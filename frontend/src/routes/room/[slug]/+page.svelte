@@ -16,7 +16,7 @@ let inviteDialog: any = $state(null);
         <ArrowLeft color="white" />
       </a>
       <h1 class="room_name">
-      {data.room.Name}
+      {data?.room?.Name ?? "Name"}
       </h1>
       <div class="room_actions">
       <button class="nav_button nav_invite" onclick={() => inviteDialog?.show()}>
