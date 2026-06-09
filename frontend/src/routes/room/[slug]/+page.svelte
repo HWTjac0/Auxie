@@ -1,15 +1,16 @@
 <script lang="ts">
-  import ArrowLeft from "../../../components/icons/ArrowLeft.svelte";
-  import EllipsisVert from "../../../components/icons/EllipsisVert.svelte";
-  import Invite from "../../../components/icons/Invite.svelte";
-  import InviteDialog from "../../../components/InviteDialog.svelte";
-  import type { PageProps } from "./$types";
-  import TextInput from "../../../components/TextInput.svelte";
+import ArrowLeft from "../../../components/icons/ArrowLeft.svelte";
+import EllipsisVert from "../../../components/icons/EllipsisVert.svelte";
+import Invite from "../../../components/icons/Invite.svelte";
+import InviteDialog from "../../../components/InviteDialog.svelte";
+import type { PageProps } from "./$types";
+import TextInput from "../../../components/TextInput.svelte";
+import SettingsPopover from "../../../components/SettingsPopover.svelte";
 
-  let { data }: PageProps = $props();
+let { data }: PageProps = $props();
 
-  let inviteDialog: any = $state(null);
-  let searchQuery: string = $state("");
+let inviteDialog: any = $state(null);
+let searchQuery: string = $state("");
 </script>
 
 <div>
@@ -19,11 +20,7 @@
         <ArrowLeft color="white" />
       </a>
       <h1 class="room_name">
-<<<<<<< HEAD
       {data?.room?.Name ?? "Name"}
-=======
-        {data.room.Name}
->>>>>>> origin/dashboard
       </h1>
       <div class="room_actions">
         <button
@@ -36,27 +33,7 @@
           <EllipsisVert color="white" />
         </button>
 
-        <div id="actions_popover" popover>
-          <div class="popover_menu">
-            <button
-              class="popover_item"
-              onclick={() => {
-                document.getElementById("actions_popover")?.hidePopover();
-                inviteDialog?.show();
-              }}
-            >
-              Invite friends
-            </button>
-            <button
-              class="popover_item"
-              onclick={() => console.log("Settings")}
-            >
-              Room settings
-            </button>
-            <div class="popover_divider"></div>
-            <a href="/" class="popover_item popover_leave"> Leave room </a>
-          </div>
-        </div>
+        <SettingsPopover onInvite={() => inviteDialog?.show()} />
       </div>
     </div>
   </nav>

@@ -120,7 +120,6 @@ let pageType = $derived(
     border-radius: 100%;
   }
 
-<<<<<<< HEAD
 .background_gradient_top {
   top: -30%;
   left: -30%;
@@ -134,21 +133,6 @@ let pageType = $derived(
   background: linear-gradient(to top right, var(--auxie-razzmatazz-600), var(--auxie-electric-purple-300));
   animation: float-bottom 20s ease-in-out infinite alternate;
 }
-=======
-  .background_gradient_top {
-    top: -30%;
-    left: -30%;
-    background: var(--bg-gradient-top);
-    animation: float-top 15s ease-in-out infinite alternate;
-  }
-
-  .background_gradient_bottom {
-    bottom: -30%;
-    right: -30%;
-    background: var(--bg-gradient-bottom);
-    animation: float-bottom 20s ease-in-out infinite alternate;
-  }
->>>>>>> origin/dashboard
 
   @keyframes float-top {
     0% {
@@ -179,17 +163,6 @@ let pageType = $derived(
       filter: blur(150px) hue-rotate(15deg);
     }
   }
-
-<<<<<<< HEAD
-.wrapper {
-  background-color: var(--auxie-deep-navy-900);
-  height: 100vh;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-=======
   .wrapper {
     background-color: var(--auxie-deep-navy-900);
     height: 100vh;
@@ -236,7 +209,6 @@ let pageType = $derived(
       var(--auxie-warm-orange-300)
     );
   }
->>>>>>> origin/dashboard
 
   .setup_container {
     flex: 1;
