@@ -161,10 +161,9 @@ func (h *SpotifyHandler) SpotifyCallback(c *gin.Context) {
 	session.Set("user_id", dbUser.ID)
 	session.Set("user_name", userResponse.DisplayName)
 	session.Set("spotify_name", userResponse.DisplayName)
-	if len(userResponse.Images) > 0 {
+	currentImage := session.Get("user_image")
+	if (currentImage == nil || currentImage == "") && len(userResponse.Images) > 0 {
 		session.Set("user_image", userResponse.Images[0].URL)
-	} else {
-		session.Set("user_image", "")
 	}
 
 	if err := session.Save(); err != nil {

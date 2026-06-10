@@ -86,8 +86,7 @@ func (r *UserSqliteRepo) GetUsersInRoom(roomId int, filter *UserFilter) ([]model
 }
 
 func (r *UserSqliteRepo) GetStreamingID(serviceType models.MusicService, userId int) (string, error) {
-	serviceName := models.GetServiceName(serviceType)
-	query := fmt.Sprintf(`SELECT %sID FROM users WHERE ID = ?`, serviceName)
+	query := fmt.Sprintf(`SELECT %sID FROM users WHERE ID = ?`, serviceType.String())
 	row := r.db.QueryRow(query, userId)
 	var streamingID string
 	err := row.Scan(&streamingID)
@@ -109,6 +108,6 @@ func (r *UserSqliteRepo) GetBySpotifyID(spotifyID string) (*models.User, error) 
 
 func (r *UserSqliteRepo) UpdateSpotifyInfo(userID int, spotifyID string, authKey string, refreshKey string, expiresAt time.Time) error {
 	query := `UPDATE users SET spotify_id = ?, spotify_auth_key = ?, spotify_refresh_key = ?, spotify_token_expires_at = ?, type = ? WHERE id = ?`
-	_, err := r.db.Exec(query, spotifyID, authKey, refreshKey, expiresAt, models.UserTypeRegistered, userID)
+	_, err := r.db.Exec(query, spotifyID, authKey, refreshKey, expiresAt, models.UserTypeRegistered.String(), userID)
 	return err
 }

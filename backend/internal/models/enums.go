@@ -22,20 +22,14 @@ const (
 	ServiceSoundcloud
 )
 
-func GetServiceName(serviceType MusicService) string {
-	var serviceName string
+var musicServiceName = map[MusicService]string{
+	ServiceSpotify:    "Spotify",
+	ServiceTidal:      "Tidal",
+	ServiceSoundcloud: "Soundcloud",
+}
 
-	switch serviceType {
-	case ServiceSpotify:
-		serviceName = "Spotify"
-	case ServiceTidal:
-		serviceName = "Tidal"
-	case ServiceSoundcloud:
-		serviceName = "Soundcloud"
-	default:
-		serviceName = ""
-	}
-	return serviceName
+func (m MusicService) String() string {
+	return musicServiceName[m]
 }
 
 var trackStatusName = map[TrackStatus]string{
