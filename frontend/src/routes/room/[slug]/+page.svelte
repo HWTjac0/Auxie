@@ -50,7 +50,7 @@ let activeTabIdx = $state(0);
         >
           <Invite color="white" />
         </button>
-        <button class="nav_button nav_actions" popovertarget="actions_popover">
+        <button class="nav_button nav_actions" id="nav_actions" popovertarget="actions_popover">
           <EllipsisVert color="white" />
         </button>
 
@@ -94,6 +94,9 @@ let activeTabIdx = $state(0);
 </div>
 
 <style>
+  #nav_actions {
+    anchor-name: --actions-anchor;
+  }
   .room_wrapper {
     background-color: var(--auxie-deep-navy-900);
     min-height: 100vh;

@@ -1,15 +1,15 @@
 <script lang="ts">
-  let { onInvite }: { onInvite: () => void } = $props();
+let { onInvite }: { onInvite: () => void } = $props();
 
-  function handleInvite() {
-    document.getElementById("actions_popover")?.hidePopover();
-    onInvite();
-  }
+function handleInvite() {
+  document.getElementById("actions_popover")?.hidePopover();
+  onInvite();
+}
 
-  function handleSettings() {
-    document.getElementById("actions_popover")?.hidePopover();
-    console.log("Settings");
-  }
+function handleSettings() {
+  document.getElementById("actions_popover")?.hidePopover();
+  console.log("Settings");
+}
 </script>
 
 <div id="actions_popover" popover>
@@ -31,8 +31,8 @@
   #actions_popover {
     position-anchor: --actions-anchor;
     inset: unset;
-    top: anchor(bottom);
-    right: anchor(right);
+    top: anchor(--actions-anchor bottom);
+    right: anchor(--actions-anchor right);
     margin-top: 10px;
     background-color: var(--auxie-deep-navy-700);
     border: 1px solid var(--auxie-deep-navy-600);
