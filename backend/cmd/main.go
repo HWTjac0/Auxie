@@ -2,7 +2,6 @@ package main
 
 import (
 	"auxie/backend/internal/app"
-	"auxie/backend/internal/handlers"
 	"log"
 	"net/http"
 	"os"
@@ -59,9 +58,9 @@ func main() {
 		v1 := api.Group("/v1")
 		{
 			auth := v1.Group("/auth")
-			auth.GET("/me", handlers.GetMe)
-			auth.GET("/spotify/login", handlers.SpotifyLogin)
-			auth.GET("/spotify/callback", handlers.SpotifyCallback)
+			auth.GET("/me", app.UserHandler.GetMe)
+			auth.GET("/spotify/login", app.SpotifyHandler.SpotifyLogin)
+			auth.GET("/spotify/callback", app.SpotifyHandler.SpotifyCallback)
 
 			room := v1.Group("/room")
 			room.GET("/random_name", app.RoomHandler.GetRandomRoomName)

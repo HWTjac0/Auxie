@@ -14,6 +14,30 @@ const (
 	TrackStatusPlayed
 )
 
+type MusicService int
+
+const (
+	ServiceSpotify MusicService = iota
+	ServiceTidal
+	ServiceSoundcloud
+)
+
+func GetServiceName(serviceType MusicService) string {
+	var serviceName string
+
+	switch serviceType {
+	case ServiceSpotify:
+		serviceName = "Spotify"
+	case ServiceTidal:
+		serviceName = "Tidal"
+	case ServiceSoundcloud:
+		serviceName = "Soundcloud"
+	default:
+		serviceName = ""
+	}
+	return serviceName
+}
+
 var trackStatusName = map[TrackStatus]string{
 	TrackStatusQueued:  "queued",
 	TrackStatusPlaying: "playing",

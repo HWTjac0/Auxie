@@ -71,3 +71,21 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	session.Save()
 	c.Redirect(http.StatusTemporaryRedirect, "/welcome")
 }
+
+func (h *UserHandler) GetMe(c *gin.Context) {
+	session := sessions.Default(c)
+	name := session.Get("user_name")
+	spotifyName := session.Get("spotify_name")
+
+	if name == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No active session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"name":         name,
+		"spotify_name": spotifyName,
+		"id":           session.Get("user_id"),
+		"image":        session.Get("user_image"),
+	})
+}

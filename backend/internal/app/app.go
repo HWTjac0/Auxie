@@ -11,8 +11,9 @@ type App struct {
 	TrackRepo repositories.TrackRepository
 	RoomRepo  repositories.RoomRepository
 
-	UserHandler *handlers.UserHandler
-	RoomHandler *handlers.RoomHandler
+	UserHandler    *handlers.UserHandler
+	RoomHandler    *handlers.RoomHandler
+	SpotifyHandler *handlers.SpotifyHandler
 }
 
 func NewApp(db *database.DB) *App {
@@ -24,7 +25,8 @@ func NewApp(db *database.DB) *App {
 		TrackRepo: trackRepo,
 		RoomRepo:  roomRepo,
 
-		UserHandler: handlers.NewUserHandler(userRepo, roomRepo),
-		RoomHandler: handlers.NewRoomHandler(roomRepo, userRepo),
+		UserHandler:    handlers.NewUserHandler(userRepo, roomRepo),
+		RoomHandler:    handlers.NewRoomHandler(roomRepo, userRepo),
+		SpotifyHandler: handlers.NewSpotifyHandler(userRepo),
 	}
 }

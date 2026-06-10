@@ -1,6 +1,9 @@
 package repositories
 
-import "auxie/backend/internal/models"
+import (
+	"auxie/backend/internal/models"
+	"time"
+)
 
 type UserFilter struct {
 	Role   *string
@@ -13,6 +16,9 @@ type UserRepository interface {
 	Create(user *models.User) (int64, error)
 	UpdateRoom(userId int, roomId int, role *string) error
 	GetUsersInRoom(roomId int, filter *UserFilter) ([]models.User, error)
+	GetStreamingID(serviceType models.MusicService, userId int) (string, error)
+	GetBySpotifyID(spotifyID string) (*models.User, error)
+	UpdateSpotifyInfo(userID int, spotifyID string, authKey string, refreshKey string, expiresAt time.Time) error
 }
 
 type RoomRepository interface {

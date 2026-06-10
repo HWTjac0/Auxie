@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 )
 
 type UserSqliteRepo struct {
@@ -82,4 +83,32 @@ func (r *UserSqliteRepo) GetUsersInRoom(roomId int, filter *UserFilter) ([]model
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *UserSqliteRepo) GetStreamingID(serviceType models.MusicService, userId int) (string, error) {
+	serviceName := models.GetServiceName(serviceType)
+	query := fmt.Sprintf(`SELECT %sID FROM users WHERE ID = ?`, serviceName)
+	row := r.db.QueryRow(query, userId)
+	var streamingID string
+	err := row.Scan(&streamingID)
+	if err != nil {
+		return "", err
+	}
+	return streamingID, nil
+}
+
+func (r *UserSqliteRepo) GetBySpotifyID(spotifyID string) (*models.User, error) {
+	query := `SELECT id, email, username, type, spotify_id, spotify_auth_key, spotify_refresh_key, spotify_token_expires_at, created_at, updated_at FROM users WHERE spotify_id = ?`
+	var user models.User
+	err := r.db.Unsafe().Get(&user, query, spotifyID)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *UserSqliteRepo) UpdateSpotifyInfo(userID int, spotifyID string, authKey string, refreshKey string, expiresAt time.Time) error {
+	query := `UPDATE users SET spotify_id = ?, spotify_auth_key = ?, spotify_refresh_key = ?, spotify_token_expires_at = ?, type = ? WHERE id = ?`
+	_, err := r.db.Exec(query, spotifyID, authKey, refreshKey, expiresAt, models.UserTypeRegistered, userID)
+	return err
 }
