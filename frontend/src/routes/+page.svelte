@@ -3,12 +3,15 @@ import { goto } from "$app/navigation";
 import { onMount } from "svelte";
 import InviteDialog from "../components/InviteDialog.svelte";
 import Button from "../components/Button.svelte";
+import UserAvatar from "../components/UserAvatar.svelte";
 
 type User = {
   name: string;
   id: string;
   image: string;
   spotify_name?: string;
+  soundcloud_name?: string;
+  tidal_name?: string;
 };
 
 type Room = {
@@ -22,6 +25,14 @@ let inviteDialog: any = $state(null);
 
 const loginWithSpotify = () => {
   window.location.href = "http://127.0.0.1:8080/api/v1/auth/spotify/login";
+};
+
+const loginWithSoundCloud = () => {
+  window.location.href = "http://127.0.0.1:8080/api/v1/auth/soundcloud/login";
+};
+
+const loginWithTidal = () => {
+  window.location.href = "http://127.0.0.1:8080/api/v1/auth/tidal/login";
 };
 
 function showQRCode(slug: string) {
@@ -88,13 +99,17 @@ onMount(async () => {
     <div class="content_wrapper">
       <div class="login_container">
         <div class="user-info">
-          {#if user.image}
-            <img src={user.image} alt="Avatar" class="avatar" />
-          {/if}
           <h2 class="sora-800">
-            Witaj, {user.spotify_name ? user.spotify_name : user?.name}
+            Welcome,<br> {user.spotify_name ? user.spotify_name : user?.name}
           </h2>
-          <a href="/api/v1/user/logout" class="logout-link onest-500">Log out</a>
+          <div>
+            <UserAvatar 
+              username={user.spotify_name ? user.spotify_name : user?.name}
+              src={user.image || ""}
+              size={60}
+            />
+            <a href="/api/v1/user/logout" class="logout-link onest-500">Log out</a>
+          </div>
         </div>
 
         <div class="rooms-section">
@@ -133,33 +148,93 @@ onMount(async () => {
           {/await}
         </div>
 
-        <div class="button_group">
-          <Button href="/create" class="onest-800">Host party</Button>
+        <div class="button_group_row">
+          <Button href="/create" class="onest-800 smaller-btn">Host party</Button>
           <Button
             href="/join"
+            class="smaller-btn"
             bgColor="var(--auxie-electric-purple-500)"
             shadowColor="var(--auxie-electric-purple-700)"
           >
             Join party
           </Button>
         </div>
-
-        {#if !user.spotify_name}
+        <div class="accounts_group">
           <div class="separator_row">
             <div class="separator"></div>
-            <p>Or login with</p>
+            <p>Connected accounts</p>
             <div class="separator"></div>
           </div>
-          <div class="button_group">
-            <Button
-              onclick={loginWithSpotify}
-              bgColor="var(--auxie-intense-mint-500)"
-              shadowColor="var(--auxie-intense-mint-700)"
-            >
-              Login with Spotify
-            </Button>
+
+            <div class="accounts-list">
+          <!-- Spotify -->
+          <div class="account-item">
+            <div class="account-details">
+              <span class="platform-name onest-800">Spotify</span>
+              <span class="platform-status onest-500 {user.spotify_name ? 'status-connected' : 'status-disconnected'}">
+                {user.spotify_name ? `Connected (${user.spotify_name})` : 'Not connected'}
+              </span>
+            </div>
+            {#if !user.spotify_name}
+              <Button
+                onclick={loginWithSpotify}
+                class="account-btn smaller-btn"
+                bgColor="var(--auxie-intense-mint-500)"
+                shadowColor="var(--auxie-intense-mint-700)"
+              >
+                Login
+              </Button>
+            {/if}
           </div>
+
+          <!-- SoundCloud -->
+          <div class="account-item">
+            <div class="account-details">
+              <span class="platform-name onest-800">SoundCloud</span>
+              <span class="platform-status onest-500 {user.soundcloud_name ? 'status-connected' : 'status-disconnected'}">
+                {user.soundcloud_name ? `Connected (${user.soundcloud_name})` : 'Not connected'}
+              </span>
+            </div>
+            {#if !user.soundcloud_name}
+              <Button
+                onclick={loginWithSoundCloud}
+                class="account-btn smaller-btn"
+                bgColor="var(--auxie-warm-orange-500)"
+                shadowColor="var(--auxie-warm-orange-700)"
+              >
+                Login
+              </Button>
+            {/if}
+          </div>
+
+          <!-- Tidal -->
+          <div class="account-item">
+            <div class="account-details">
+              <span class="platform-name onest-800">Tidal</span>
+              <span class="platform-status onest-500 {user.tidal_name ? 'status-connected' : 'status-disconnected'}">
+                {user.tidal_name ? `Connected (${user.tidal_name})` : 'Not connected'}
+              </span>
+            </div>
+            {#if !user.tidal_name}
+              <Button
+                onclick={loginWithTidal}
+                class="account-btn smaller-btn"
+                bgColor="var(--auxie-vivid-blue-500)"
+                shadowColor="var(--auxie-vivid-blue-700)"
+              >
+                Login
+              </Button>
+            {/if}
+          </div>
+        </div>
+
+        {#if !user.spotify_name && !user.soundcloud_name && !user.tidal_name}
+          <p class="guest-info onest-500" style="margin-top: -6px; margin-bottom: 0;">
+            You're in a guest session. Link a streaming service to search songs.
+          </p>
         {/if}
+
+        </div>
       </div>
     </div>
     <InviteDialog bind:this={inviteDialog} slug={activeSlug} />
@@ -250,6 +325,11 @@ onMount(async () => {
     }
   }
 
+  .accounts_group {
+    display: grid;
+    gap: 10px;
+  }
+
   .content_wrapper {
     position: relative;
     z-index: 10;
@@ -264,27 +344,101 @@ onMount(async () => {
     row-gap: 40px;
   }
 
-  .button_group {
+  .button_group_row {
     width: 100%;
     display: grid;
-    row-gap: 18px;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
   }
+
+  :global(.smaller-btn) {
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+  }
+
   .separator_row {
     font-family: "Onest";
     font-weight: bold;
     font-size: 14px;
     color: var(--auxie-cloud-white-200);
-    display: grid;
-    grid-template-columns: 30% 1fr 30%;
-    justify-items: center;
+    display: flex;
     align-items: center;
+    width: 100%;
+    gap: 12px;
+  }
+  .separator_row p {
+    margin: 0;
+    white-space: nowrap;
   }
   .separator {
-    width: 100%;
+    flex: 1;
     height: 3px;
     border-radius: 4px;
     background-color: var(--auxie-deep-navy-500);
   }
+  .guest-info {
+    text-align: center;
+    color: var(--auxie-cloud-white-600);
+    font-size: 11px;
+    opacity: 0.65;
+  }
+
+  .accounts-list {
+    display: grid;
+    row-gap: 12px;
+    width: 100%;
+    background-color: var(--auxie-deep-navy-700);
+    border: 1px solid var(--auxie-deep-navy-600);
+    border-radius: 16px;
+    padding: 14px;
+    margin-top: 4px;
+    margin-bottom: 12px;
+  }
+
+  .account-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--auxie-deep-navy-600);
+  }
+
+  .account-item:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .account-details {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .platform-name {
+    color: var(--auxie-cloud-white-50);
+    font-size: 14px;
+  }
+
+  .platform-status {
+    font-size: 11px;
+  }
+
+  .status-connected {
+    color: var(--auxie-intense-mint-500);
+  }
+
+  .status-disconnected {
+    color: var(--auxie-cloud-white-600);
+    opacity: 0.6;
+  }
+
+  :global(.account-btn) {
+    width: 72px !important;
+    padding: 6px 0 !important;
+    font-size: 12px !important;
+    border-radius: 14px !important;
+  }
+
   h2 {
     font-size: 32px;
     color: var(--auxie-cloud-white-50);
@@ -297,19 +451,37 @@ onMount(async () => {
   }
   .user-info {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
     gap: 10px;
-  }
-  .avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
+    h2 {
+      text-align: left;
+      text-overflow: ellipsis;
+    }
+    div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      }
   }
   .logout-link {
-    color: var(--auxie-cloud-white-600);
-    font-size: 14px;
-    text-decoration: underline;
+    color: var(--auxie-soft-crimson-400);
+    border: 1px solid rgba(244, 124, 124, 0.35);
+    background-color: transparent;
+    font-size: 12px;
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+  }
+  .logout-link:hover {
+    color: var(--auxie-soft-crimson-500);
+    border-color: var(--auxie-soft-crimson-500);
+    background-color: rgba(239, 68, 68, 0.06);
+  }
+  .logout-link:active {
+    transform: scale(0.97);
   }
   .rooms-section {
     font-family: "Onest";

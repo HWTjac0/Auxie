@@ -3,6 +3,7 @@ import type { PageLoad } from "./$types";
 export type User = {
   Username: string;
   CurrentRole: string;
+  AvatarUrl?: string;
 }
 
 export type Room = {

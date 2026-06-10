@@ -1,5 +1,6 @@
 <script lang="ts">
 import type { User } from "../routes/room/[slug]/+page";
+import UserAvatar from "./UserAvatar.svelte";
 
 let { users = [] }: { users: User[] } = $props();
 </script>
@@ -13,9 +14,7 @@ let { users = [] }: { users: User[] } = $props();
   <ul class="users-list">
     {#each users as user}
       <li class="user-item">
-        <div class="user-avatar">
-          {user.Username.charAt(0).toUpperCase()}
-        </div>
+        <UserAvatar username={user.Username} src={user.AvatarUrl} />
         <div class="user-info">
           <span class="username onest-500">{user.Username}</span>
           <span class="role onest-300">{user.CurrentRole}</span>
@@ -83,19 +82,7 @@ let { users = [] }: { users: User[] } = $props();
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
-  .user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--auxie-electric-purple-500), var(--auxie-razzmatazz-500));
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    font-family: "Sora", sans-serif;
-  }
+
 
   .user-info {
     display: flex;
