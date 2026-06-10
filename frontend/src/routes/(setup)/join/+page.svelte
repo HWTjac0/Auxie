@@ -3,8 +3,24 @@
   import Button from "../../../components/Button.svelte";
   import CodeInput from "../../../components/CodeInput.svelte";
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+
   let username = $state("");
   let joinCode = $state("");
+  let isLoggedIn = $state(false);
+
+  onMount(async () => {
+    try {
+      const res = await fetch("/api/v1/auth/me");
+      if (res.ok) {
+        const user = await res.json();
+        username = user.spotify_name || user.name;
+        isLoggedIn = true;
+      }
+    } catch (e) {
+      console.error("Failed to check auth", e);
+    }
+  });
 
   async function handleJoin(e: Event) {
     e.preventDefault();
@@ -37,7 +53,13 @@
 
 <h2 class="sora-800">Join room</h2>
 <form onsubmit={handleJoin}>
-  <TextInput bind:value={username} name="username" placeholder="Username" />
+  {#if !isLoggedIn}
+    <TextInput bind:value={username} name="username" placeholder="Username" />
+  {:else}
+    <div class="logged-in-label onest-500">
+      Joining as: <span class="username">{username}</span>
+    </div>
+  {/if}
   <CodeInput bind:value={joinCode} name="joinCode" />
   <Button
     bgColor="var(--auxie-warm-orange-500)"
@@ -53,5 +75,18 @@
     font-size: 32px;
     color: var(--auxie-cloud-white-50);
     text-align: center;
+  }
+  .logged-in-label {
+    background-color: var(--auxie-deep-navy-700);
+    border: 2px dashed var(--auxie-deep-navy-500);
+    border-radius: 20px;
+    padding: 11px 16px;
+    color: var(--auxie-cloud-white-600);
+    font-size: 15px;
+    text-align: center;
+  }
+  .logged-in-label .username {
+    color: var(--auxie-cloud-white-100);
+    font-weight: bold;
   }
 </style>

@@ -5,8 +5,24 @@
   import TextInput from "../../../components/TextInput.svelte";
   let { data }: PageProps = $props();
 
-  let username = $derived(data.user.name);
-  let roomName = $derived(data.room.name);
+  import { onMount } from "svelte";
+
+  let username = $state(data.user.name);
+  let roomName = $state(data.room.name);
+  let isLoggedIn = $state(false);
+
+  onMount(async () => {
+    try {
+      const res = await fetch("/api/v1/auth/me");
+      if (res.ok) {
+        const user = await res.json();
+        username = user.spotify_name || user.name;
+        isLoggedIn = true;
+      }
+    } catch (e) {
+      console.error("Failed to check auth", e);
+    }
+  });
 
   async function handleCreate(e: Event) {
     e.preventDefault();
@@ -39,7 +55,13 @@
 
 <h2 class="sora-800">Host party</h2>
 <form onsubmit={handleCreate}>
-  <TextInput placeholder="Username" bind:value={username} />
+  {#if !isLoggedIn}
+    <TextInput placeholder="Username" bind:value={username} />
+  {:else}
+    <div class="logged-in-label onest-500">
+      Hosting as: <span class="username">{username}</span>
+    </div>
+  {/if}
   <TextInput placeholder="Name of the party" bind:value={roomName} />
   <Button
     bgColor="var(--auxie-warm-orange-500)"
@@ -56,5 +78,18 @@
     color: var(--auxie-cloud-white-50);
     text-align: center;
     margin-bottom: 20px;
+  }
+  .logged-in-label {
+    background-color: var(--auxie-deep-navy-700);
+    border: 2px dashed var(--auxie-deep-navy-500);
+    border-radius: 20px;
+    padding: 11px 16px;
+    color: var(--auxie-cloud-white-600);
+    font-size: 15px;
+    text-align: center;
+  }
+  .logged-in-label .username {
+    color: var(--auxie-cloud-white-100);
+    font-weight: bold;
   }
 </style>
