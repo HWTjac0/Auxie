@@ -42,7 +42,7 @@ type SpotifyUserResponse struct {
 	} `json:"images"`
 }
 
-func (h *SpotifyHandler) SpotifyLogin(c *gin.Context) {
+func (h *SpotifyHandler) Login(c *gin.Context) {
 	scope := "user-read-private user-read-email user-modify-playback-state"
 	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	redirectURI := "http://127.0.0.1:8080/api/v1/auth/spotify/callback"
@@ -59,7 +59,7 @@ func (h *SpotifyHandler) SpotifyLogin(c *gin.Context) {
 
 }
 
-func (h *SpotifyHandler) SpotifyCallback(c *gin.Context) {
+func (h *SpotifyHandler) Callback(c *gin.Context) {
 	code := c.Query("code")
 	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")

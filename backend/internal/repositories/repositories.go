@@ -19,6 +19,10 @@ type UserRepository interface {
 	GetStreamingID(serviceType models.MusicService, userId int) (string, error)
 	GetBySpotifyID(spotifyID string) (*models.User, error)
 	UpdateSpotifyInfo(userID int, spotifyID string, authKey string, refreshKey string, expiresAt time.Time) error
+	GetByTidalID(tidalID string) (*models.User, error)
+	UpdateTidalInfo(userID int, tidalID string, authKey string) error
+	GetBySoundCloudID(soundCloudID string) (*models.User, error)
+	UpdateSoundCloudInfo(userID int, soundCloudID string, authKey string) error
 }
 
 type RoomRepository interface {

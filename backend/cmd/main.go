@@ -59,8 +59,10 @@ func main() {
 		{
 			auth := v1.Group("/auth")
 			auth.GET("/me", app.UserHandler.GetMe)
-			auth.GET("/spotify/login", app.SpotifyHandler.SpotifyLogin)
-			auth.GET("/spotify/callback", app.SpotifyHandler.SpotifyCallback)
+			auth.GET("/spotify/login", app.SpotifyHandler.Login)
+			auth.GET("/spotify/callback", app.SpotifyHandler.Callback)
+			auth.GET("/tidal/login", app.TidalHandler.Login)
+			auth.GET("/tidal/callback", app.TidalHandler.Callback)
 
 			room := v1.Group("/room")
 			room.GET("/random_name", app.RoomHandler.GetRandomRoomName)

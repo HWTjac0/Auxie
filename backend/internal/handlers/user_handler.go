@@ -76,6 +76,7 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 	session := sessions.Default(c)
 	name := session.Get("user_name")
 	spotifyName := session.Get("spotify_name")
+	tidalName := session.Get("tidal_name")
 
 	if name == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "No active session"})
@@ -85,6 +86,7 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"name":         name,
 		"spotify_name": spotifyName,
+		"tidal_name":   tidalName,
 		"id":           session.Get("user_id"),
 		"image":        session.Get("user_image"),
 	})
