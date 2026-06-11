@@ -5,7 +5,9 @@ import (
 	"auxie/backend/internal/repositories"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -171,4 +173,55 @@ func (h *SpotifyHandler) Callback(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusTemporaryRedirect, "http://127.0.0.1:5173/")
+}
+
+func (h *SpotifyHandler) GetUserAccessToken(c *gin.Context) (string, error) {
+	session := sessions.Default(c)
+	sessionUserId := session.Get("user_id")
+	if sessionUserId != nil {
+		var userId int
+		switch val := sessionUserId.(type) {
+		case int:
+			userId = val
+		case int64:
+			userId = int(val)
+		case float64:
+			userId = int(val)
+		}
+		dbUser, err := h.userRepo.GetByID(userId)
+		if err != nil {
+			return "", err
+		}
+
+		return dbUser.SpotifyAuthKey.String, nil
+	}
+	return "", errors.New("User not logged in")
+
+}
+func (h *SpotifyHandler) SearchTrack(c *gin.Context) {
+	accessToken, err := h.GetUserAccessToken(c)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	keywords := c.Query("search")
+	reqMe, _ := http.NewRequest("GET", "https://api.spotify.com/v1/search", nil)
+	reqMe.Header.Set("Authorization", "Bearer "+accessToken)
+	q := reqMe.URL.Query()
+	q.Add("q", keywords)
+	q.Add("type", "track")
+	q.Add("market", "PL")
+	reqMe.URL.RawQuery = q.Encode()
+	client := &http.Client{}
+	respMe, err := client.Do(reqMe)
+	if respMe.StatusCode != 200 || err != nil {
+		bodybytes, _ := io.ReadAll(respMe.Body)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": json.RawMessage(bodybytes)})
+		return
+	}
+
+	bodybytes, err := io.ReadAll(respMe.Body)
+	c.JSON(http.StatusOK, gin.H{"resp": json.RawMessage(bodybytes)})
+	return
 }

@@ -13,6 +13,7 @@ type UserFilter struct {
 
 type UserRepository interface {
 	GetByEmail(email string) (*models.User, error)
+	GetByID(id int) (*models.User, error)
 	Create(user *models.User) (int64, error)
 	UpdateRoom(userId int, roomId int, role *string) error
 	GetUsersInRoom(roomId int, filter *UserFilter) ([]models.User, error)

@@ -75,6 +75,7 @@ func main() {
 			user.GET("/rooms", app.UserHandler.GetUserRooms)
 			user.GET("/logout", app.UserHandler.Logout)
 		}
+		v1.GET("/search", app.SpotifyHandler.SearchTrack)
 	}
 	router.Run("127.0.0.1:8080")
 }

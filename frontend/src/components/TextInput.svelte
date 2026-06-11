@@ -3,10 +3,16 @@ interface Props {
   value: string;
   placeholder: string;
   name?: string;
+  onchangeCallback?: () => void;
 }
-let { value = $bindable(), placeholder, name }: Props = $props();
+let {
+  value = $bindable(),
+  placeholder,
+  name,
+  onchangeCallback,
+}: Props = $props();
 </script>
-<input type="text" bind:value={value} placeholder="{placeholder}" {name}>
+<input type="text" bind:value={value} placeholder="{placeholder}" {name} onchange={onchangeCallback}>
 
 <style>
 input {

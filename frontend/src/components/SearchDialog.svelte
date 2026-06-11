@@ -1,17 +1,24 @@
 <script lang="ts">
-  import TextInput from "./TextInput.svelte";
+import TextInput from "./TextInput.svelte";
 
-  let { searchQuery = $bindable("") }: { searchQuery?: string } = $props();
+let { searchQuery = $bindable("") }: { searchQuery?: string } = $props();
 
-  let dialogElement: HTMLDialogElement;
+let dialogElement: HTMLDialogElement;
 
-  export function show() {
-    dialogElement.showModal();
-  }
+export function show() {
+  dialogElement.showModal();
+}
 
-  export function close() {
-    dialogElement.close();
-  }
+export function close() {
+  dialogElement.close();
+}
+const onChange = () => {
+  fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}`)
+    .then((res) => res.json())
+    .then((json) => {
+      console.log(json);
+    });
+};
 </script>
 
 <dialog bind:this={dialogElement} class="search-dialog">
@@ -22,7 +29,7 @@
     </div>
     
     <div class="search-section">
-      <TextInput bind:value={searchQuery} placeholder="Type song name..." />
+      <TextInput bind:value={searchQuery} onchangeCallback={onChange} placeholder="Type song name..." />
       <div class="search-results">
         <p class="empty-state">No matching songs found</p>
       </div>

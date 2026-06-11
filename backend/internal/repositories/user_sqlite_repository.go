@@ -21,6 +21,15 @@ func (r *UserSqliteRepo) GetByEmail(email string) (*models.User, error) {
 	log.Println("TODO: implement UserSqliteRepo.GetByEmail")
 	return nil, nil
 }
+func (r *UserSqliteRepo) GetByID(id int) (*models.User, error) {
+	query := `SELECT id, email, username, type, spotify_id, spotify_auth_key, spotify_refresh_key, spotify_token_expires_at, created_at, updated_at FROM users WHERE id = ?`
+	var user models.User
+	err := r.db.Unsafe().Get(&user, query, id)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
 
 func (r *UserSqliteRepo) Create(user *models.User) (int64, error) {
 	query := `INSERT INTO users (email, username, type, created_at) VALUES (?, ?, ?, ?)`
