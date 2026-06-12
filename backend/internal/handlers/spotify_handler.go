@@ -1,17 +1,14 @@
 package handlers
 
 import (
+	"auxie/backend/internal/clients"
 	"auxie/backend/internal/models"
 	"auxie/backend/internal/repositories"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
@@ -19,29 +16,12 @@ import (
 )
 
 type SpotifyHandler struct {
-	userRepo repositories.UserRepository
+	userRepo      repositories.UserRepository
+	spotifyClient *clients.SpotifyClient
 }
 
-func NewSpotifyHandler(userRepo repositories.UserRepository) *SpotifyHandler {
-	return &SpotifyHandler{userRepo: userRepo}
-}
-
-// MOST OF THIS CODE IS TEMPORARY FOR TESTING PURPOSES
-type SpotifyTokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	Scope        string `json:"scope"`
-	ExpiresIn    int    `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
-}
-
-type SpotifyUserResponse struct {
-	ID          string `json:"id"`
-	DisplayName string `json:"display_name"`
-	Email       string `json:"email"`
-	Images      []struct {
-		URL string `json:"url"`
-	} `json:"images"`
+func NewSpotifyHandler(userRepo repositories.UserRepository, spotifyClient *clients.SpotifyClient) *SpotifyHandler {
+	return &SpotifyHandler{userRepo: userRepo, spotifyClient: spotifyClient}
 }
 
 func (h *SpotifyHandler) Login(c *gin.Context) {
@@ -58,57 +38,25 @@ func (h *SpotifyHandler) Login(c *gin.Context) {
 	}.Encode()
 
 	c.Redirect(http.StatusTemporaryRedirect, authURL)
-
 }
 
 func (h *SpotifyHandler) Callback(c *gin.Context) {
 	code := c.Query("code")
-	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
-	clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
 
 	if code == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No authorization code"})
 		return
 	}
 
-	redirectURI := "http://127.0.0.1:8080/api/v1/auth/spotify/callback"
-	data := url.Values{}
-	data.Set("grant_type", "authorization_code")
-	data.Set("code", code)
-	data.Set("redirect_uri", redirectURI)
-
-	req, _ := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(data.Encode()))
-	authHeader := base64.StdEncoding.EncodeToString([]byte(clientID + ":" + clientSecret))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Basic "+authHeader)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	tokenData, err := h.spotifyClient.ExchangeCode(code)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Error exchanging code for token"})
 		return
 	}
-	defer resp.Body.Close()
 
-	var tokenData SpotifyTokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tokenData); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding token"})
-		return
-	}
-
-	reqMe, _ := http.NewRequest("GET", "https://api.spotify.com/v1/me", nil)
-	reqMe.Header.Set("Authorization", "Bearer "+tokenData.AccessToken)
-
-	respMe, err := client.Do(reqMe)
-	if err != nil || respMe.StatusCode != 200 {
+	userResponse, err := h.spotifyClient.GetUserProfile(tokenData.AccessToken)
+	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Error loading profile"})
-		return
-	}
-	defer respMe.Body.Close()
-
-	var userResponse SpotifyUserResponse
-	if err := json.NewDecoder(respMe.Body).Decode(&userResponse); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding user data"})
 		return
 	}
 
@@ -118,37 +66,10 @@ func (h *SpotifyHandler) Callback(c *gin.Context) {
 	if err == nil && existingUser != nil {
 		dbUser = existingUser
 	} else {
-		session := sessions.Default(c)
-		sessionUserID := session.Get("user_id")
-
-		if sessionUserID != nil {
-			var guestUserID int
-			switch val := sessionUserID.(type) {
-			case int:
-				guestUserID = val
-			case int64:
-				guestUserID = int(val)
-			case float64:
-				guestUserID = int(val)
-			}
-
-			if guestUserID > 0 {
-				dbUser = &models.User{ID: guestUserID}
-			}
-		}
-
-		if dbUser == nil {
-			newUser := &models.User{
-				Username:  userResponse.DisplayName,
-				Type:      models.UserTypeRegistered,
-				CreatedAt: time.Now(),
-			}
-			newID, err := h.userRepo.Create(newUser)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-				return
-			}
-			dbUser = &models.User{ID: int(newID)}
+		dbUser, err = getOrCreateUser(c, h.userRepo, userResponse.DisplayName)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve or create user"})
+			return
 		}
 	}
 
@@ -176,28 +97,18 @@ func (h *SpotifyHandler) Callback(c *gin.Context) {
 }
 
 func (h *SpotifyHandler) GetUserAccessToken(c *gin.Context) (string, error) {
-	session := sessions.Default(c)
-	sessionUserId := session.Get("user_id")
-	if sessionUserId != nil {
-		var userId int
-		switch val := sessionUserId.(type) {
-		case int:
-			userId = val
-		case int64:
-			userId = int(val)
-		case float64:
-			userId = int(val)
-		}
-		dbUser, err := h.userRepo.GetByID(userId)
-		if err != nil {
-			return "", err
-		}
-
-		return dbUser.SpotifyAuthKey.String, nil
+	userId, err := getSessionUserID(c)
+	if err != nil {
+		return "", errors.New("User not logged in")
 	}
-	return "", errors.New("User not logged in")
+	dbUser, err := h.userRepo.GetByID(userId)
+	if err != nil {
+		return "", err
+	}
 
+	return dbUser.SpotifyAuthKey.String, nil
 }
+
 func (h *SpotifyHandler) SearchTrack(c *gin.Context) {
 	accessToken, err := h.GetUserAccessToken(c)
 	if err != nil {
@@ -206,22 +117,11 @@ func (h *SpotifyHandler) SearchTrack(c *gin.Context) {
 	}
 
 	keywords := c.Query("search")
-	reqMe, _ := http.NewRequest("GET", "https://api.spotify.com/v1/search", nil)
-	reqMe.Header.Set("Authorization", "Bearer "+accessToken)
-	q := reqMe.URL.Query()
-	q.Add("q", keywords)
-	q.Add("type", "track")
-	q.Add("market", "PL")
-	reqMe.URL.RawQuery = q.Encode()
-	client := &http.Client{}
-	respMe, err := client.Do(reqMe)
-	if respMe.StatusCode != 200 || err != nil {
-		bodybytes, _ := io.ReadAll(respMe.Body)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": json.RawMessage(bodybytes)})
+	result, err := h.spotifyClient.SearchTrack(accessToken, keywords)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	bodybytes, err := io.ReadAll(respMe.Body)
-	c.JSON(http.StatusOK, gin.H{"resp": json.RawMessage(bodybytes)})
-	return
+	c.JSON(http.StatusOK, gin.H{"resp": result})
 }

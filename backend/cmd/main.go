@@ -2,17 +2,11 @@ package main
 
 import (
 	"auxie/backend/internal/app"
+	"auxie/backend/internal/router"
 	"log"
-	"net/http"
-	"os"
-	"time"
 
 	database "auxie/backend/internal/db"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -29,53 +23,8 @@ func main() {
 
 	defer db.Close()
 
-	router := gin.Default()
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://127.0.0.1:5173"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	appInstance := app.NewApp(db)
 
-	secret := os.Getenv("COOKIE_SECRET_KEY")
-	store := cookie.NewStore([]byte(secret))
-
-	store.Options(sessions.Options{
-		Path:     "/",
-		MaxAge:   3600 * 24, // 24h
-		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
-	})
-	router.Use(sessions.Sessions("auxie-session", store))
-
-	app := app.NewApp(db)
-
-	api := router.Group("/api")
-	{
-		v1 := api.Group("/v1")
-		{
-			auth := v1.Group("/auth")
-			auth.GET("/me", app.UserHandler.GetMe)
-			auth.GET("/spotify/login", app.SpotifyHandler.Login)
-			auth.GET("/spotify/callback", app.SpotifyHandler.Callback)
-			auth.GET("/tidal/login", app.TidalHandler.Login)
-			auth.GET("/tidal/callback", app.TidalHandler.Callback)
-
-			room := v1.Group("/room")
-			room.GET("/random_name", app.RoomHandler.GetRandomRoomName)
-			room.GET("/:slug", app.RoomHandler.GetRoomDetails)
-			room.POST("/create", app.RoomHandler.CreateRoom)
-			room.POST("/join", app.UserHandler.JoinRoom)
-
-			user := v1.Group("/user")
-			user.GET("/random_name", app.UserHandler.GetRandomUserName)
-			user.GET("/rooms", app.UserHandler.GetUserRooms)
-			user.GET("/logout", app.UserHandler.Logout)
-		}
-		v1.GET("/search", app.SpotifyHandler.SearchTrack)
-	}
-	router.Run("127.0.0.1:8080")
+	r := router.SetupRouter(appInstance)
+	r.Run("127.0.0.1:8080")
 }

@@ -31,24 +31,9 @@ func (h *UserHandler) GetRandomUserName(c *gin.Context) {
 }
 
 func (h *UserHandler) GetUserRooms(c *gin.Context) {
-	session := sessions.Default(c)
-	userIDVal := session.Get("user_id")
-
-	if userIDVal == nil {
+	userID, err := getSessionUserID(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "No active session"})
-		return
-	}
-
-	var userID int
-	switch val := userIDVal.(type) {
-	case int:
-		userID = val
-	case int64:
-		userID = int(val)
-	case float64:
-		userID = int(val)
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID type in session"})
 		return
 	}
 
