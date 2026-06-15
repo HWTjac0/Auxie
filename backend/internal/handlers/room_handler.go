@@ -60,21 +60,45 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 		return
 	}
 
-	guest := &models.User{
-		Username:  req.Username,
-		Type:      models.UserTypeGuest,
-		CreatedAt: time.Now(),
-	}
-
-	guestID, err := h.userRepo.Create(guest)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create guest user"})
-		return
-	}
-
+	var userID int
 	session := sessions.Default(c)
+	existingUserIDVal := session.Get("user_id")
+
+	if existingUserIDVal != nil {
+		var tempID int
+		switch val := existingUserIDVal.(type) {
+		case int:
+			tempID = val
+		case int64:
+			tempID = int(val)
+		case float64:
+			tempID = int(val)
+		}
+		if tempID > 0 {
+			if existingUser, err := h.userRepo.GetByID(tempID); err == nil && existingUser != nil {
+				userID = existingUser.ID
+			}
+		}
+	}
+
+	if userID == 0 {
+		// Create a new guest user
+		guest := &models.User{
+			Username:  req.Username,
+			Type:      models.UserTypeGuest,
+			CreatedAt: time.Now(),
+		}
+
+		guestID, err := h.userRepo.Create(guest)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create guest user"})
+			return
+		}
+		userID = int(guestID)
+	}
+
 	session.Set("user_name", req.Username)
-	session.Set("user_id", guestID)
+	session.Set("user_id", userID)
 	if img := session.Get("user_image"); img == nil || img == "" {
 		session.Set("user_image", "")
 	}
@@ -85,7 +109,7 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 
 	room := &models.Room{
 		Name:      req.RoomName,
-		HostID:    int(guestID),
+		HostID:    userID,
 		JoinCode:  joinCode,
 		Slug:      slug,
 		CreatedAt: time.Now(),
@@ -98,11 +122,11 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 	}
 
 	role := "Host"
-	_ = h.userRepo.UpdateRoom(int(guestID), int(roomID), &role)
+	_ = h.userRepo.UpdateRoom(userID, int(roomID), &role)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"room":    room,
-		"user_id": guestID,
+		"user_id": userID,
 	})
 }
 
@@ -124,28 +148,55 @@ func (h *UserHandler) JoinRoom(c *gin.Context) {
 		return
 	}
 
-	guest := &models.User{
-		Username:  req.UserName,
-		Type:      models.UserTypeGuest,
-		CreatedAt: time.Now(),
+	var userID int
+	session := sessions.Default(c)
+	existingUserIDVal := session.Get("user_id")
+
+	if existingUserIDVal != nil {
+		var tempID int
+		switch val := existingUserIDVal.(type) {
+		case int:
+			tempID = val
+		case int64:
+			tempID = int(val)
+		case float64:
+			tempID = int(val)
+		}
+		if tempID > 0 {
+			if existingUser, err := h.userRepo.GetByID(tempID); err == nil && existingUser != nil {
+				userID = existingUser.ID
+			}
+		}
 	}
 
-	guestID, err := h.userRepo.Create(guest)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create guest user"})
-		return
+	if userID == 0 {
+		// Create a new guest user
+		guest := &models.User{
+			Username:  req.UserName,
+			Type:      models.UserTypeGuest,
+			CreatedAt: time.Now(),
+		}
+
+		guestID, err := h.userRepo.Create(guest)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create guest user"})
+			return
+		}
+		userID = int(guestID)
 	}
 
 	role := "Guest"
-	err = h.userRepo.UpdateRoom(int(guestID), room.ID, &role)
+	if room.HostID == userID {
+		role = "Host"
+	}
+	err = h.userRepo.UpdateRoom(userID, room.ID, &role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to join room"})
 		return
 	}
 
-	session := sessions.Default(c)
 	session.Set("user_name", req.UserName)
-	session.Set("user_id", guestID)
+	session.Set("user_id", userID)
 	if img := session.Get("user_image"); img == nil || img == "" {
 		session.Set("user_image", "")
 	}
@@ -153,7 +204,7 @@ func (h *UserHandler) JoinRoom(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"room":    room,
-		"user_id": guestID,
+		"user_id": userID,
 	})
 }
 

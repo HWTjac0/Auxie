@@ -4,13 +4,18 @@ import (
 	"encoding/base64"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 )
 
 type SpotifyClient struct {
-	base         *BaseClient
-	clientID     string
-	clientSecret string
-	redirectURI  string
+	base                            *BaseClient
+	clientID                        string
+	clientSecret                    string
+	redirectURI                     string
+	mu                              sync.Mutex
+	clientCredentialsToken          string
+	clientCredentialsTokenExpiresAt time.Time
 }
 
 type SpotifyTokenResponse struct {
@@ -106,4 +111,34 @@ func (c *SpotifyClient) SearchTrack(accessToken, query string) (interface{}, err
 		return nil, err
 	}
 	return result, nil
+}
+
+func (c *SpotifyClient) GetClientCredentialsToken() (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.clientCredentialsToken != "" && time.Now().Before(c.clientCredentialsTokenExpiresAt) {
+		return c.clientCredentialsToken, nil
+	}
+
+	data := url.Values{}
+	data.Set("grant_type", "client_credentials")
+
+	authHeader := base64.StdEncoding.EncodeToString([]byte(c.clientID + ":" + c.clientSecret))
+	headers := map[string]string{
+		"Content-Type":  "application/x-www-form-urlencoded",
+		"Authorization": "Basic " + authHeader,
+	}
+
+	var tokenResp SpotifyTokenResponse
+	err := c.base.Request("POST", "https://accounts.spotify.com/api/token", headers, strings.NewReader(data.Encode()), &tokenResp)
+	if err != nil {
+		return "", err
+	}
+
+	c.clientCredentialsToken = tokenResp.AccessToken
+	// Subtract 10 seconds to avoid race conditions/edge cases
+	c.clientCredentialsTokenExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn)*time.Second - 10*time.Second)
+
+	return c.clientCredentialsToken, nil
 }

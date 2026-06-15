@@ -102,17 +102,25 @@ func (h *SpotifyHandler) GetUserAccessToken(c *gin.Context) (string, error) {
 		return "", err
 	}
 
+	if !dbUser.SpotifyAuthKey.Valid || dbUser.SpotifyAuthKey.String == "" {
+		return "", fmt.Errorf("Spotify is not connected for user ID %d", userId)
+	}
+
 	return dbUser.SpotifyAuthKey.String, nil
 }
 
 func (h *SpotifyHandler) SearchTrack(c *gin.Context) {
 	accessToken, err := h.GetUserAccessToken(c)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-		return
+		token, ccErr := h.spotifyClient.GetClientCredentialsToken()
+		if ccErr != nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Spotify not connected and Client Credentials flow failed: " + ccErr.Error()})
+			return
+		}
+		accessToken = token
 	}
 
-	keywords := c.Query("search")
+	keywords := c.Query("q")
 	result, err := h.spotifyClient.SearchTrack(accessToken, keywords)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
