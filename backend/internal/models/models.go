@@ -14,10 +14,14 @@ type User struct {
 	SpotifyAuthKey        sql.NullString `db:"spotify_auth_key"`
 	SpotifyRefreshKey     sql.NullString `db:"spotify_refresh_key"`
 	SpotifyTokenExpiresAt sql.NullTime   `db:"spotify_token_expires_at"`
-	SoundCloudID          sql.NullString `db:"soundcloud_id"`
-	SoundCloudKey         sql.NullString `db:"soundcloud_key"`
-	TidalID               sql.NullString `db:"tidal_id"`
-	TidalKey              sql.NullString `db:"tidal_key"`
+	SoundCloudID             sql.NullString `db:"soundcloud_id"`
+	SoundCloudKey            sql.NullString `db:"soundcloud_key"`
+	SoundCloudRefreshKey     sql.NullString `db:"soundcloud_refresh_key"`
+	SoundCloudTokenExpiresAt sql.NullTime   `db:"soundcloud_token_expires_at"`
+	TidalID                  sql.NullString `db:"tidal_id"`
+	TidalKey                 sql.NullString `db:"tidal_key"`
+	TidalRefreshKey          sql.NullString `db:"tidal_refresh_key"`
+	TidalTokenExpiresAt      sql.NullTime   `db:"tidal_token_expires_at"`
 	CurrentRoomID         sql.NullInt64  `db:"current_room_id"`
 	CurrentRole           UserRole       `db:"current_role"`
 	CreatedAt             time.Time      `db:"created_at"`

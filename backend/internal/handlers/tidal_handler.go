@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -119,7 +120,8 @@ func (h *TidalHandler) Callback(c *gin.Context) {
 		}
 	}
 
-	err = h.userRepo.UpdateTidalInfo(dbUser.ID, tidalID, tokenData.AccessToken)
+	expiresAt := time.Now().Add(time.Duration(tokenData.ExpiresIn) * time.Second)
+	err = h.userRepo.UpdateTidalInfo(dbUser.ID, tidalID, tokenData.AccessToken, tokenData.RefreshToken, expiresAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Tidal info in database"})
 		return

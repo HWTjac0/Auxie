@@ -22,7 +22,7 @@ func (r *UserSqliteRepo) GetByEmail(email string) (*models.User, error) {
 	return nil, nil
 }
 func (r *UserSqliteRepo) GetByID(id int) (*models.User, error) {
-	query := `SELECT id, email, username, type, spotify_id, spotify_auth_key, spotify_refresh_key, spotify_token_expires_at, created_at, updated_at FROM users WHERE id = ?`
+	query := `SELECT id, email, username, type, spotify_id, spotify_auth_key, spotify_refresh_key, spotify_token_expires_at, soundcloud_id, soundcloud_key, soundcloud_refresh_key, soundcloud_token_expires_at, tidal_id, tidal_key, tidal_refresh_key, tidal_token_expires_at, current_room_id, current_role, created_at, updated_at FROM users WHERE id = ?`
 	var user models.User
 	err := r.db.Unsafe().Get(&user, query, id)
 	if err != nil {
@@ -122,7 +122,7 @@ func (r *UserSqliteRepo) UpdateSpotifyInfo(userID int, spotifyID string, authKey
 }
 
 func (r *UserSqliteRepo) GetByTidalID(tidalID string) (*models.User, error) {
-	query := `SELECT id, email, username, type, tidal_id, tidal_key, created_at, updated_at FROM users WHERE tidal_id = ?`
+	query := `SELECT id, email, username, type, tidal_id, tidal_key, tidal_refresh_key, tidal_token_expires_at, created_at, updated_at FROM users WHERE tidal_id = ?`
 	var user models.User
 	err := r.db.Unsafe().Get(&user, query, tidalID)
 	if err != nil {
@@ -131,14 +131,14 @@ func (r *UserSqliteRepo) GetByTidalID(tidalID string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserSqliteRepo) UpdateTidalInfo(userID int, tidalID string, authKey string) error {
-	query := `UPDATE users SET tidal_id = ?, tidal_key = ?, type = ? WHERE id = ?`
-	_, err := r.db.Exec(query, tidalID, authKey, models.UserTypeRegistered.String(), userID)
+func (r *UserSqliteRepo) UpdateTidalInfo(userID int, tidalID string, authKey string, refreshKey string, expiresAt time.Time) error {
+	query := `UPDATE users SET tidal_id = ?, tidal_key = ?, tidal_refresh_key = ?, tidal_token_expires_at = ?, type = ? WHERE id = ?`
+	_, err := r.db.Exec(query, tidalID, authKey, refreshKey, expiresAt, models.UserTypeRegistered.String(), userID)
 	return err
 }
 
 func (r *UserSqliteRepo) GetBySoundCloudID(soundCloudID string) (*models.User, error) {
-	query := `SELECT id, email, username, type, soundcloud_id, soundcloud_key, created_at, updated_at FROM users WHERE soundcloud_id = ?`
+	query := `SELECT id, email, username, type, soundcloud_id, soundcloud_key, soundcloud_refresh_key, soundcloud_token_expires_at, created_at, updated_at FROM users WHERE soundcloud_id = ?`
 	var user models.User
 	err := r.db.Unsafe().Get(&user, query, soundCloudID)
 	if err != nil {
@@ -147,8 +147,8 @@ func (r *UserSqliteRepo) GetBySoundCloudID(soundCloudID string) (*models.User, e
 	return &user, nil
 }
 
-func (r *UserSqliteRepo) UpdateSoundCloudInfo(userID int, soundCloudID string, authKey string) error {
-	query := `UPDATE users SET soundcloud_id = ?, soundcloud_key = ?, type = ? WHERE id = ?`
-	_, err := r.db.Exec(query, soundCloudID, authKey, models.UserTypeRegistered.String(), userID)
+func (r *UserSqliteRepo) UpdateSoundCloudInfo(userID int, soundCloudID string, authKey string, refreshKey string, expiresAt time.Time) error {
+	query := `UPDATE users SET soundcloud_id = ?, soundcloud_key = ?, soundcloud_refresh_key = ?, soundcloud_token_expires_at = ?, type = ? WHERE id = ?`
+	_, err := r.db.Exec(query, soundCloudID, authKey, refreshKey, expiresAt, models.UserTypeRegistered.String(), userID)
 	return err
 }

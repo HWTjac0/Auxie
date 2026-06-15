@@ -8,8 +8,12 @@ CREATE TABLE IF NOT EXISTS users (
 
     soundcloud_id TEXT,
     soundcloud_key TEXT,
+    soundcloud_refresh_key TEXT,
+    soundcloud_token_expires_at DATETIME,
     tidal_id TEXT,
     tidal_key TEXT,
+    tidal_refresh_key TEXT,
+    tidal_token_expires_at DATETIME,
 
     spotify_id TEXT,
     spotify_auth_key TEXT,

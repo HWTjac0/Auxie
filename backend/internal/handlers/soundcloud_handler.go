@@ -144,7 +144,8 @@ func (h *SoundCloudHandler) SoundCloudCallback(c *gin.Context) {
 		}
 	}
 
-	err = h.userRepo.UpdateSoundCloudInfo(dbUser.ID, soundCloudID, tokenData.AccessToken)
+	expiresAt := time.Now().Add(time.Duration(tokenData.ExpiresIn) * time.Second)
+	err = h.userRepo.UpdateSoundCloudInfo(dbUser.ID, soundCloudID, tokenData.AccessToken, tokenData.RefreshToken, expiresAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update SoundCloud info in database"})
 		return

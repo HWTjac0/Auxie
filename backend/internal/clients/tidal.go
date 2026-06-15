@@ -60,6 +60,24 @@ func (c *TidalClient) ExchangeCode(code, codeVerifier string) (*TidalTokenRespon
 	return &tokenResp, nil
 }
 
+func (c *TidalClient) TokenRefresh(refreshToken string) (*TidalTokenResponse, error) {
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", refreshToken)
+	data.Set("client_id", c.clientID)
+	
+	headers := map[string]string{
+		"Content-Type": "application/x-www-form-urlencoded",
+	}
+
+	var tokenResp TidalTokenResponse
+	err := c.base.Request("POST", "https://auth.tidal.com/v1/oauth2/token", headers, strings.NewReader(data.Encode()), &tokenResp)
+	if err != nil {
+		return nil, err
+	}
+	return &tokenResp, nil
+}
+
 // GetUserProfile pobiera profil użytkownika.
 func (c *TidalClient) GetUserProfile(accessToken string) (*TidalUserResponse, error) {
 	headers := map[string]string{

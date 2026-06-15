@@ -4,7 +4,6 @@ import (
 	"auxie/backend/internal/clients"
 	"auxie/backend/internal/models"
 	"auxie/backend/internal/repositories"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -97,10 +96,7 @@ func (h *SpotifyHandler) Callback(c *gin.Context) {
 }
 
 func (h *SpotifyHandler) GetUserAccessToken(c *gin.Context) (string, error) {
-	userId, err := getSessionUserID(c)
-	if err != nil {
-		return "", errors.New("User not logged in")
-	}
+	userId := c.GetInt("user_id")
 	dbUser, err := h.userRepo.GetByID(userId)
 	if err != nil {
 		return "", err

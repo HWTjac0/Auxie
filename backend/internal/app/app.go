@@ -13,10 +13,15 @@ type App struct {
 	TrackRepo repositories.TrackRepository
 	RoomRepo  repositories.RoomRepository
 
-	UserHandler    *handlers.UserHandler
-	RoomHandler    *handlers.RoomHandler
-	SpotifyHandler *handlers.SpotifyHandler
-	TidalHandler   *handlers.TidalHandler
+	UserHandler       *handlers.UserHandler
+	RoomHandler       *handlers.RoomHandler
+	SpotifyHandler    *handlers.SpotifyHandler
+	TidalHandler      *handlers.TidalHandler
+	SoundCloudHandler *handlers.SoundCloudHandler
+	
+	SpotifyClient    *clients.SpotifyClient
+	TidalClient      *clients.TidalClient
+	SoundCloudClient *clients.SoundCloudClient
 }
 
 func NewApp(db *database.DB) *App {
@@ -35,14 +40,25 @@ func NewApp(db *database.DB) *App {
 		"http://127.0.0.1:8080/api/v1/auth/tidal/callback",
 	)
 
+	soundCloudClient := clients.NewSoundCloudClient(
+		os.Getenv("SOUNDCLOUD_CLIENT_ID"),
+		os.Getenv("SOUNDCLOUD_CLIENT_SECRET"),
+		"http://127.0.0.1:8080/api/v1/auth/soundcloud/callback",
+	)
+
 	return &App{
 		UserRepo:  userRepo,
 		TrackRepo: trackRepo,
 		RoomRepo:  roomRepo,
 
-		UserHandler:    handlers.NewUserHandler(userRepo, roomRepo),
-		RoomHandler:    handlers.NewRoomHandler(roomRepo, userRepo),
-		SpotifyHandler: handlers.NewSpotifyHandler(userRepo, spotifyClient),
-		TidalHandler:   handlers.NewTidalHandler(userRepo, tidalClient),
+		UserHandler:       handlers.NewUserHandler(userRepo, roomRepo),
+		RoomHandler:       handlers.NewRoomHandler(roomRepo, userRepo),
+		SpotifyHandler:    handlers.NewSpotifyHandler(userRepo, spotifyClient),
+		TidalHandler:      handlers.NewTidalHandler(userRepo, tidalClient),
+		SoundCloudHandler: handlers.NewSoundCloudHandler(userRepo),
+
+		SpotifyClient:    spotifyClient,
+		TidalClient:      tidalClient,
+		SoundCloudClient: soundCloudClient,
 	}
 }

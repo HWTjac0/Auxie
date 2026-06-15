@@ -60,7 +60,25 @@ func (c *SpotifyClient) ExchangeCode(code string) (*SpotifyTokenResponse, error)
 	return &tokenResp, nil
 }
 
-// GetUserProfile pobiera profil użytkownika.
+func (c *SpotifyClient) TokenRefresh(refreshToken string) (*SpotifyTokenResponse, error) {
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", refreshToken)
+
+	authHeader := base64.StdEncoding.EncodeToString([]byte(c.clientID + ":" + c.clientSecret))
+	headers := map[string]string{
+		"Content-Type":  "application/x-www-form-urlencoded",
+		"Authorization": "Basic " + authHeader,
+	}
+
+	var tokenResp SpotifyTokenResponse
+	err := c.base.Request("POST", "https://accounts.spotify.com/api/token", headers, strings.NewReader(data.Encode()), &tokenResp)
+	if err != nil {
+		return nil, err
+	}
+	return &tokenResp, nil
+}
+
 func (c *SpotifyClient) GetUserProfile(accessToken string) (*SpotifyUserResponse, error) {
 	headers := map[string]string{
 		"Authorization": "Bearer " + accessToken,

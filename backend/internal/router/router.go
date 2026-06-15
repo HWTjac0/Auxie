@@ -2,6 +2,7 @@ package router
 
 import (
 	"auxie/backend/internal/app"
+	"auxie/backend/internal/handlers"
 	"net/http"
 	"os"
 	"time"
@@ -41,24 +42,36 @@ func SetupRouter(a *app.App) *gin.Engine {
 		v1 := api.Group("/v1")
 		{
 			auth := v1.Group("/auth")
-			auth.GET("/me", a.UserHandler.GetMe)
+			auth.GET("/me", handlers.SessionAuthMiddleware(), a.UserHandler.GetMe)
 			auth.GET("/spotify/login", a.SpotifyHandler.Login)
 			auth.GET("/spotify/callback", a.SpotifyHandler.Callback)
 			auth.GET("/tidal/login", a.TidalHandler.Login)
 			auth.GET("/tidal/callback", a.TidalHandler.Callback)
+			auth.GET("/soundcloud/login", a.SoundCloudHandler.SoundCloudLogin)
+			auth.GET("/soundcloud/callback", a.SoundCloudHandler.SoundCloudCallback)
 
 			room := v1.Group("/room")
 			room.GET("/random_name", a.RoomHandler.GetRandomRoomName)
 			room.GET("/:slug", a.RoomHandler.GetRoomDetails)
-			room.POST("/create", a.RoomHandler.CreateRoom)
 			room.POST("/join", a.UserHandler.JoinRoom)
 
 			user := v1.Group("/user")
 			user.GET("/random_name", a.UserHandler.GetRandomUserName)
-			user.GET("/rooms", a.UserHandler.GetUserRooms)
 			user.GET("/logout", a.UserHandler.Logout)
+			
+			protected := v1.Group("/")
+			protected.Use(handlers.SessionAuthMiddleware())
+			protected.Use(handlers.TokenRefreshMiddleware(
+				a.UserRepo,
+				a.SpotifyClient,
+				a.TidalClient,
+				a.SoundCloudClient,
+			))
+			
+			protected.POST("/room/create", a.RoomHandler.CreateRoom)
+			protected.GET("/user/rooms", a.UserHandler.GetUserRooms)
+			protected.GET("/search", a.SpotifyHandler.SearchTrack)
 		}
-		v1.GET("/search", a.SpotifyHandler.SearchTrack)
 	}
 
 	return r

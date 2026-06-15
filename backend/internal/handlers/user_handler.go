@@ -31,11 +31,7 @@ func (h *UserHandler) GetRandomUserName(c *gin.Context) {
 }
 
 func (h *UserHandler) GetUserRooms(c *gin.Context) {
-	userID, err := getSessionUserID(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "No active session"})
-		return
-	}
+	userID := c.GetInt("user_id")
 
 	room, err := h.roomRepo.GetByHostId(userID)
 	if err != nil {
@@ -62,11 +58,6 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 	name := session.Get("user_name")
 	spotifyName := session.Get("spotify_name")
 	tidalName := session.Get("tidal_name")
-
-	if name == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "No active session"})
-		return
-	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"name":         name,

@@ -21,9 +21,9 @@ type UserRepository interface {
 	GetBySpotifyID(spotifyID string) (*models.User, error)
 	UpdateSpotifyInfo(userID int, spotifyID string, authKey string, refreshKey string, expiresAt time.Time) error
 	GetByTidalID(tidalID string) (*models.User, error)
-	UpdateTidalInfo(userID int, tidalID string, authKey string) error
+	UpdateTidalInfo(userID int, tidalID string, authKey string, refreshKey string, expiresAt time.Time) error
 	GetBySoundCloudID(soundCloudID string) (*models.User, error)
-	UpdateSoundCloudInfo(userID int, soundCloudID string, authKey string) error
+	UpdateSoundCloudInfo(userID int, soundCloudID string, authKey string, refreshKey string, expiresAt time.Time) error
 }
 
 type RoomRepository interface {
