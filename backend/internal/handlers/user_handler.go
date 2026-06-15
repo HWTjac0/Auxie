@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"auxie/backend/internal/clients"
 	"auxie/backend/internal/repositories"
 	"database/sql"
 	"fmt"
@@ -12,12 +13,27 @@ import (
 )
 
 type UserHandler struct {
-	userRepo repositories.UserRepository
-	roomRepo repositories.RoomRepository
+	userRepo         repositories.UserRepository
+	roomRepo         repositories.RoomRepository
+	spotifyClient    *clients.SpotifyClient
+	tidalClient      *clients.TidalClient
+	soundCloudClient *clients.SoundCloudClient
 }
 
-func NewUserHandler(userRepo repositories.UserRepository, roomRepo repositories.RoomRepository) *UserHandler {
-	return &UserHandler{userRepo: userRepo, roomRepo: roomRepo}
+func NewUserHandler(
+	userRepo repositories.UserRepository,
+	roomRepo repositories.RoomRepository,
+	spotifyClient *clients.SpotifyClient,
+	tidalClient *clients.TidalClient,
+	soundCloudClient *clients.SoundCloudClient,
+) *UserHandler {
+	return &UserHandler{
+		userRepo:         userRepo,
+		roomRepo:         roomRepo,
+		spotifyClient:    spotifyClient,
+		tidalClient:      tidalClient,
+		soundCloudClient: soundCloudClient,
+	}
 }
 
 func (h *UserHandler) GetRandomUserName(c *gin.Context) {
@@ -66,4 +82,55 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 		"id":           session.Get("user_id"),
 		"image":        session.Get("user_image"),
 	})
+}
+
+func (h *UserHandler) Search(c *gin.Context) {
+	userId := c.GetInt("user_id")
+	dbUser, err := h.userRepo.GetByID(userId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve user"})
+		return
+	}
+
+	keywords := c.Query("search")
+	if keywords == "" {
+		keywords = c.Query("q")
+	}
+
+	results := make(map[string]interface{})
+
+	// Check Spotify
+	hasSpotify := dbUser.SpotifyID.Valid && dbUser.SpotifyID.String != ""
+	if hasSpotify {
+		accessToken := dbUser.SpotifyAuthKey.String
+		spotifyRes, err := h.spotifyClient.SearchTrack(accessToken, keywords)
+		if err == nil {
+			results["spotify"] = spotifyRes
+		} else {
+			results["spotify_error"] = err.Error()
+		}
+	} else {
+		// Fallback for Guests or users without Spotify to search using client credentials
+		token, ccErr := h.spotifyClient.GetClientCredentialsToken()
+		if ccErr == nil {
+			spotifyRes, err := h.spotifyClient.SearchTrack(token, keywords)
+			if err == nil {
+				results["spotify"] = spotifyRes
+			}
+		}
+	}
+
+	// Check Tidal
+	hasTidal := dbUser.TidalID.Valid && dbUser.TidalID.String != ""
+	if hasTidal {
+		accessToken := dbUser.TidalKey.String
+		tidalRes, err := h.tidalClient.SearchTrack(accessToken, keywords)
+		if err == nil {
+			results["tidal"] = tidalRes
+		} else {
+			results["tidal_error"] = err.Error()
+		}
+	}
+
+	c.JSON(http.StatusOK, results)
 }

@@ -51,7 +51,7 @@ func NewApp(db *database.DB) *App {
 		TrackRepo: trackRepo,
 		RoomRepo:  roomRepo,
 
-		UserHandler:       handlers.NewUserHandler(userRepo, roomRepo),
+		UserHandler:       handlers.NewUserHandler(userRepo, roomRepo, spotifyClient, tidalClient, soundCloudClient),
 		RoomHandler:       handlers.NewRoomHandler(roomRepo, userRepo),
 		SpotifyHandler:    handlers.NewSpotifyHandler(userRepo, spotifyClient),
 		TidalHandler:      handlers.NewTidalHandler(userRepo, tidalClient),

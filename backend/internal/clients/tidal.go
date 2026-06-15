@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 )
@@ -65,7 +66,7 @@ func (c *TidalClient) TokenRefresh(refreshToken string) (*TidalTokenResponse, er
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", refreshToken)
 	data.Set("client_id", c.clientID)
-	
+
 	headers := map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
 	}
@@ -91,4 +92,32 @@ func (c *TidalClient) GetUserProfile(accessToken string) (*TidalUserResponse, er
 		return nil, err
 	}
 	return &userResp, nil
+}
+
+func (c *TidalClient) SearchTrack(accessToken, query string) (interface{}, error) {
+	headers := map[string]string{
+		"Authorization": "Bearer " + accessToken,
+		"Accept":        "application/vnd.api+json",
+	}
+
+	parsedUrl, err := url.Parse("https://openapi.tidal.com")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse base url: %w", err)
+	}
+	parsedUrl = parsedUrl.JoinPath("v2", "searchResults", query)
+
+	q := parsedUrl.Query()
+	q.Set("countryCode", "PL")
+	q.Set("explicitFilter", "INCLUDE")
+	q.Set("include", "tracks,albums,tracks.artists,tracks.albums")
+	q.Set("page[limit]", "5")
+
+	parsedUrl.RawQuery = q.Encode()
+
+	var result interface{}
+	err = c.base.Request("GET", parsedUrl.String(), headers, nil, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

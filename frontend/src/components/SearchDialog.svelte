@@ -4,7 +4,8 @@ import TextInput from "./TextInput.svelte";
 let { searchQuery = $bindable("") }: { searchQuery?: string } = $props();
 
 let dialogElement: HTMLDialogElement;
-let tracks = $state<any[]>([]);
+let spotifyTracks = $state<any[]>([]);
+let tidalTracks = $state<any[]>([]);
 let loading = $state(false);
 
 export function show() {
@@ -22,20 +23,100 @@ function formatDuration(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+function parseTidalResults(json: any): any[] {
+  if (!json || !json.included) return [];
+  const included = json.included;
+
+  const artistsMap = new Map<string, string>();
+  const albumsMap = new Map<string, { name: string; coverUrl: string }>();
+
+  for (const item of included) {
+    if (item.type === "artists") {
+      artistsMap.set(item.id, item.attributes?.name || "");
+    } else if (item.type === "albums") {
+      const name = item.attributes?.title || "";
+      // Tidal V2 coverArt relation is to-one, so data is a single object
+      const coverArtId = item.relationships?.coverArt?.data?.id;
+      let coverUrl = "";
+      if (coverArtId) {
+        const parts = coverArtId.replace(/-/g, "/");
+        coverUrl = `https://resources.tidal.com/images/${parts}/160x160.jpg`;
+      }
+      albumsMap.set(item.id, { name, coverUrl });
+    }
+  }
+
+  const tracksList: any[] = [];
+
+  for (const item of included) {
+    if (item.type === "tracks") {
+      const id = item.id;
+      const title = item.attributes?.title || "";
+      const version = item.attributes?.version;
+      const name = version ? `${title} (${version})` : title;
+
+      // Parse ISO 8601 duration "PT4M41S"
+      const durationStr = item.attributes?.duration || "";
+      const durationMatches = durationStr.match(
+        /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/,
+      );
+      let duration_ms = 0;
+      if (durationMatches) {
+        const hours = parseInt(durationMatches[1] || "0", 10);
+        const minutes = parseInt(durationMatches[2] || "0", 10);
+        const seconds = parseInt(durationMatches[3] || "0", 10);
+        duration_ms = (hours * 3600 + minutes * 60 + seconds) * 1000;
+      }
+
+      // Resolve artists
+      const artistRelations = item.relationships?.artists?.data || [];
+      const artists = artistRelations
+        .map((ref: any) => {
+          const artistName = artistsMap.get(ref.id);
+          return artistName ? { name: artistName } : null;
+        })
+        .filter(Boolean);
+
+      // Resolve album (Tidal V2 album relation is to-one)
+      const albumId = item.relationships?.album?.data?.id;
+      const albumInfo = albumId ? albumsMap.get(albumId) : null;
+      const albumName = albumInfo?.name || "";
+      const coverUrl = albumInfo?.coverUrl || "";
+
+      tracksList.push({
+        id,
+        name,
+        artists,
+        album: {
+          name: albumName,
+          images: coverUrl ? [{ url: coverUrl }] : [],
+        },
+        duration_ms,
+        platform: "tidal",
+        uri: `tidal:track:${id}`,
+      });
+    }
+  }
+
+  return tracksList;
+}
+
 $effect(() => {
   const query = searchQuery.trim();
   if (!query) {
-    tracks = [];
+    spotifyTracks = [];
+    tidalTracks = [];
     loading = false;
     return;
   }
 
   loading = true;
   const timeoutId = setTimeout(() => {
-    fetch(`/api/v1/search?q=${encodeURIComponent(query)}`)
+    fetch(`/api/v1/search?search=${encodeURIComponent(query)}`)
       .then((res) => res.json())
       .then((json) => {
-        tracks = json.resp?.tracks?.items || [];
+        spotifyTracks = json.spotify?.tracks?.items || [];
+        tidalTracks = parseTidalResults(json.tidal) || [];
         loading = false;
       })
       .catch((err) => {
@@ -59,29 +140,62 @@ $effect(() => {
     
     <div class="search-section">
       <TextInput bind:value={searchQuery} placeholder="Type song name..." />
-      <div class="search-results" class:centered-state={loading || tracks.length === 0}>
+      <div class="search-results" class:centered-state={loading || (spotifyTracks.length === 0 && tidalTracks.length === 0)}>
         {#if loading}
           <div class="spinner"></div>
-        {:else if tracks.length > 0}
-          <div class="tracks-list">
-            {#each tracks as track (track.id)}
-              <div class="track-item">
-                {#if track.album?.images?.length > 0}
-                  <img class="cover-art" src={track.album.images[track.album.images.length - 1].url} alt={track.album.name} />
-                {:else}
-                  <div class="cover-placeholder"></div>
-                {/if}
-                <div class="track-info">
-                  <div class="track-title onest-500">{track.name}</div>
-                  <div class="track-meta onest-400">
-                    <span class="artists">{track.artists.map((a: any) => a.name).join(', ')}</span>
-                    <span class="bullet">&bull;</span>
-                    <span class="album">{track.album.name}</span>
-                  </div>
+        {:else if spotifyTracks.length > 0 || tidalTracks.length > 0}
+          <div class="results-container">
+            {#if spotifyTracks.length > 0}
+              <div class="service-section">
+                <h3 class="service-title onest-600 spotify-color">Spotify</h3>
+                <div class="tracks-list">
+                  {#each spotifyTracks as track (track.id)}
+                    <div class="track-item">
+                      {#if track.album?.images?.length > 0}
+                        <img class="cover-art" src={track.album.images[track.album.images.length - 1].url} alt={track.album.name} />
+                      {:else}
+                        <div class="cover-placeholder"></div>
+                      {/if}
+                      <div class="track-info">
+                        <div class="track-title onest-500">{track.name}</div>
+                        <div class="track-meta onest-400">
+                          <span class="artists">{track.artists.map((a: any) => a.name).join(', ')}</span>
+                          <span class="bullet">&bull;</span>
+                          <span class="album">{track.album.name}</span>
+                        </div>
+                      </div>
+                      <div class="track-duration onest-400">{formatDuration(track.duration_ms)}</div>
+                    </div>
+                  {/each}
                 </div>
-                <div class="track-duration onest-400">{formatDuration(track.duration_ms)}</div>
               </div>
-            {/each}
+            {/if}
+
+            {#if tidalTracks.length > 0}
+              <div class="service-section">
+                <h3 class="service-title onest-600 tidal-color">Tidal</h3>
+                <div class="tracks-list">
+                  {#each tidalTracks as track (track.id)}
+                    <div class="track-item">
+                      {#if track.album?.images?.length > 0}
+                        <img class="cover-art" src={track.album.images[track.album.images.length - 1].url} alt={track.album.name} />
+                      {:else}
+                        <div class="cover-placeholder"></div>
+                      {/if}
+                      <div class="track-info">
+                        <div class="track-title onest-500">{track.name}</div>
+                        <div class="track-meta onest-400">
+                          <span class="artists">{track.artists.map((a: any) => a.name).join(', ')}</span>
+                          <span class="bullet">&bull;</span>
+                          <span class="album">{track.album.name}</span>
+                        </div>
+                      </div>
+                      <div class="track-duration onest-400">{formatDuration(track.duration_ms)}</div>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/if}
           </div>
         {:else}
           <p class="empty-state">No matching songs found</p>
@@ -272,5 +386,37 @@ $effect(() => {
     to {
       transform: rotate(360deg);
     }
+  }
+
+  .results-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .service-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .service-title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 4px 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .spotify-color {
+    color: #1DB954;
+  }
+
+  .tidal-color {
+    color: #00E6FF;
   }
 </style>
