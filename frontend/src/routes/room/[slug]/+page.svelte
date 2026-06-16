@@ -13,6 +13,7 @@ import List from "../../../components/icons/List.svelte";
 import Users from "../../../components/icons/Users.svelte";
 import type { Component } from "svelte";
 import { onMount } from "svelte";
+import { toasts } from "../../../lib/toasts.svelte";
 
 let { data }: PageProps = $props();
 
@@ -53,12 +54,17 @@ onMount(() => {
               AvatarUrl: "",
             },
           ];
+          toasts.success(`${joinedUser.username} joined the room`);
         }
       } else if (msg.type === "USER_LEFT") {
         const leftUser = msg.payload;
         activeUsers = activeUsers.filter(
           (u) => u.Username !== leftUser.username,
         );
+        toasts.warning(`${leftUser.username} left the room`);
+      } else if (msg.type === "TRACK_ADDED") {
+        const track = msg.payload;
+        toasts.success(`New song added: ${track.title || "Unknown Title"}`);
       }
     } catch (e) {
       console.error("Failed to parse WS message:", e);

@@ -4,6 +4,7 @@ import { goto } from "$app/navigation";
 import { page } from "$app/state";
 import favicon from "$lib/assets/favicon.svg";
 import "../styles/global.css";
+import ToastContainer from "../components/ToastContainer.svelte";
 
 let { children } = $props();
 
@@ -30,3 +31,5 @@ onMount(async () => {
 </svelte:head>
 
 {@render children()}
+
+<ToastContainer />
