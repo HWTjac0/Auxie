@@ -21,10 +21,72 @@ type RoomHandler struct {
 }
 
 func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.UserRepository) *RoomHandler {
+	hub := NewRoomHub()
+
+	type dbEvent struct {
+		isJoin   bool
+		roomID   string
+		client   *WSClient
+	}
+	dbQueue := make(chan dbEvent, 256)
+
+	go func() {
+		for ev := range dbQueue {
+			if ev.isJoin {
+				room, err := roomRepo.GetBySlug(ev.roomID)
+				if err == nil {
+					role := "Guest"
+					if room.HostID == ev.client.UserID {
+						role = "Host"
+					}
+					ev.client.Role = role
+					if err := userRepo.UpdateRoom(ev.client.UserID, room.ID, &role); err != nil {
+						log.Printf("Failed to update user room status on enter: %v", err)
+					}
+				}
+
+				hub.broadcast <- &BroadcastMessage{
+					RoomID: ev.roomID,
+					Payload: gin.H{
+						"type": "USER_JOINED",
+						"payload": gin.H{
+							"user_id":  ev.client.UserID,
+							"username": ev.client.Username,
+							"role":     ev.client.Role,
+						},
+					},
+				}
+			} else {
+				if err := userRepo.LeaveRoom(ev.client.UserID); err != nil {
+					log.Printf("Failed to update user room status on leave: %v", err)
+				}
+
+				hub.broadcast <- &BroadcastMessage{
+					RoomID: ev.roomID,
+					Payload: gin.H{
+						"type": "USER_LEFT",
+						"payload": gin.H{
+							"user_id":  ev.client.UserID,
+							"username": ev.client.Username,
+						},
+					},
+				}
+			}
+		}
+	}()
+
+	hub.onUserJoin = func(roomID string, client *WSClient) {
+		dbQueue <- dbEvent{isJoin: true, roomID: roomID, client: client}
+	}
+
+	hub.onUserLeave = func(roomID string, client *WSClient) {
+		dbQueue <- dbEvent{isJoin: false, roomID: roomID, client: client}
+	}
+
 	return &RoomHandler{
 		roomRepo: roomRepo,
 		userRepo: userRepo,
-		hub:      NewRoomHub(),
+		hub:      hub,
 	}
 }
 
@@ -281,37 +343,16 @@ func (h *RoomHandler) HandleWS(c *gin.Context) {
 		Send:     make(chan interface{}, 256),
 	}
 
-	// Register client in the hub
+	// Register client in the hub. This will trigger onUserJoin if it's their first connection.
 	h.hub.register <- &Subscription{RoomID: roomSlug, Client: client}
 
 	// Start client's write pump
 	go client.WritePump()
 
-	// Broadcast user joined event to the room
-	h.hub.broadcast <- &BroadcastMessage{
-		RoomID: roomSlug,
-		Payload: gin.H{
-			"type": "USER_JOINED",
-			"payload": gin.H{
-				"user_id":  user.ID,
-				"username": user.Username,
-			},
-		},
-	}
-
 	// Read loop (to detect disconnection)
 	defer func() {
+		// Unregister client. This will trigger onUserLeave if it's their last connection.
 		h.hub.unregister <- &Subscription{RoomID: roomSlug, Client: client}
-		h.hub.broadcast <- &BroadcastMessage{
-			RoomID: roomSlug,
-			Payload: gin.H{
-				"type": "USER_LEFT",
-				"payload": gin.H{
-					"user_id":  user.ID,
-					"username": user.Username,
-				},
-			},
-		}
 	}()
 
 	for {

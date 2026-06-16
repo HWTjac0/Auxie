@@ -34,7 +34,7 @@ let activeTabIdx = $state(0);
 
 onMount(() => {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const wsUrl = `${protocol}//127.0.0.1:8080/api/v1/room/${data.slug}/ws`;
+  const wsUrl = `${protocol}//${window.location.hostname}:8080/api/v1/room/${data.slug}/ws`;
 
   const socket = new WebSocket(wsUrl);
 
@@ -50,7 +50,7 @@ onMount(() => {
             ...activeUsers,
             {
               Username: joinedUser.username,
-              CurrentRole: "Guest",
+              CurrentRole: joinedUser.role || "Guest",
               AvatarUrl: "",
             },
           ];

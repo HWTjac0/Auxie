@@ -9,6 +9,7 @@ type WSClient struct {
 	Conn     *websocket.Conn
 	UserID   int
 	Username string
+	Role     string
 	Send     chan interface{}
 }
 
@@ -36,10 +37,12 @@ type BroadcastMessage struct {
 
 type RoomHub struct {
 	// roomID -> clients
-	rooms      map[string]map[*WSClient]bool
-	broadcast  chan *BroadcastMessage
-	register   chan *Subscription
-	unregister chan *Subscription
+	rooms       map[string]map[*WSClient]bool
+	broadcast   chan *BroadcastMessage
+	register    chan *Subscription
+	unregister  chan *Subscription
+	onUserJoin  func(roomID string, client *WSClient)
+	onUserLeave func(roomID string, client *WSClient)
 }
 
 func NewRoomHub() *RoomHub {
@@ -62,7 +65,19 @@ func (h *RoomHub) run() {
 				clients = make(map[*WSClient]bool)
 				h.rooms[sub.RoomID] = clients
 			}
+			
+			userConnectionCount := 0
+			for client := range clients {
+				if client.UserID == sub.Client.UserID {
+					userConnectionCount++
+				}
+			}
+
 			clients[sub.Client] = true
+
+			if userConnectionCount == 0 && h.onUserJoin != nil {
+				go h.onUserJoin(sub.RoomID, sub.Client)
+			}
 
 		case sub := <-h.unregister:
 			clients := h.rooms[sub.RoomID]
@@ -70,6 +85,18 @@ func (h *RoomHub) run() {
 				if _, ok := clients[sub.Client]; ok {
 					delete(clients, sub.Client)
 					close(sub.Client.Send)
+
+					userConnectionCount := 0
+					for client := range clients {
+						if client.UserID == sub.Client.UserID {
+							userConnectionCount++
+						}
+					}
+
+					if userConnectionCount == 0 && h.onUserLeave != nil {
+						go h.onUserLeave(sub.RoomID, sub.Client)
+					}
+
 					if len(clients) == 0 {
 						delete(h.rooms, sub.RoomID)
 					}

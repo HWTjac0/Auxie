@@ -23,7 +23,7 @@ type User struct {
 	TidalRefreshKey          sql.NullString `db:"tidal_refresh_key"`
 	TidalTokenExpiresAt      sql.NullTime   `db:"tidal_token_expires_at"`
 	CurrentRoomID         sql.NullInt64  `db:"current_room_id"`
-	CurrentRole           UserRole       `db:"current_role"`
+	CurrentRole           *string        `db:"current_role"`
 	CreatedAt             time.Time      `db:"created_at"`
 	UpdatedAt             time.Time      `db:"updated_at"`
 }

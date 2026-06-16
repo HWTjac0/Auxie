@@ -16,6 +16,7 @@ type UserRepository interface {
 	GetByID(id int) (*models.User, error)
 	Create(user *models.User) (int64, error)
 	UpdateRoom(userId int, roomId int, role *string) error
+	LeaveRoom(userId int) error
 	GetUsersInRoom(roomId int, filter *UserFilter) ([]models.User, error)
 	GetStreamingID(serviceType models.MusicService, userId int) (string, error)
 	GetBySpotifyID(spotifyID string) (*models.User, error)

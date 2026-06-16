@@ -152,3 +152,9 @@ func (r *UserSqliteRepo) UpdateSoundCloudInfo(userID int, soundCloudID string, a
 	_, err := r.db.Exec(query, soundCloudID, authKey, refreshKey, expiresAt, models.UserTypeRegistered.String(), userID)
 	return err
 }
+
+func (r *UserSqliteRepo) LeaveRoom(userID int) error {
+	query := `UPDATE users SET current_room_id = NULL, current_role = NULL WHERE id = ?`
+	_, err := r.db.Exec(query, userID)
+	return err
+}
