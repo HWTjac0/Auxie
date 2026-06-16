@@ -7,6 +7,7 @@ import type { PageProps } from "./$types";
 import SettingsPopover from "../../../components/SettingsPopover.svelte";
 import UsersTab from "../../../components/UsersTab.svelte";
 import QueueTab from "../../../components/QueueTab.svelte";
+import NowPlaying from "../../../components/NowPlaying.svelte";
 import SearchDialog from "../../../components/SearchDialog.svelte";
 import Plus from "../../../components/icons/Plus.svelte";
 import List from "../../../components/icons/List.svelte";
@@ -25,6 +26,7 @@ let queue = $state<any[]>(data.queue || []);
 let proposedQueue = $state<any[]>(data.proposedQueue || []);
 
 let currentUserId = $state(data.currentUserId || 0);
+let ws = $state<WebSocket | null>(null);
 
 let currentUser = $derived(activeUsers.find(u => u.ID === currentUserId || u.id === currentUserId));
 
@@ -69,6 +71,7 @@ onMount(() => {
   const wsUrl = `${protocol}//${window.location.hostname}:8080/api/v1/room/${data.slug}/ws`;
 
   const socket = new WebSocket(wsUrl);
+  ws = socket;
 
   socket.onmessage = (event) => {
     try {
@@ -128,6 +131,9 @@ onMount(() => {
         const { title, artist } = msg.payload;
         toasts.add(`"${title}" by ${artist} was skipped`, "track");
         fetchRoomData();
+      } else if (msg.type === "playback:start") {
+        // Mark first queue item as playing (refresh queue)
+        fetchRoomData();
       }
     } catch (e) {
       console.error("Failed to parse WS message:", e);
@@ -184,6 +190,7 @@ onMount(() => {
         
         <div class="tab-content">
           {#if activeTabIdx === 0}
+            <NowPlaying queue={queue} currentUser={currentUser} slug={data.slug} {ws} />
             <QueueTab queue={queue} proposedQueue={proposedQueue} currentUser={currentUser} slug={data.slug} />
           {:else if activeTabIdx === 1}
             <UsersTab users={activeUsers} currentUser={currentUser} slug={data.slug} />

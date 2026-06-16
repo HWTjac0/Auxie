@@ -4,6 +4,7 @@ import (
 	database "auxie/backend/internal/db"
 	"auxie/backend/internal/models"
 	"log"
+	"time"
 )
 
 type RoomSqliteRepo struct {
@@ -65,8 +66,8 @@ func (r *RoomSqliteRepo) GetBySlug(slug string) (*models.Room, error) {
 }
 
 func (r *RoomSqliteRepo) UpdateLastPlayedPosition(roomID int, position int) error {
-	log.Println("TODO: implement RoomSqliteRepo.UpdateLastPlayedPosition")
-	return nil
+	_, err := r.db.Exec(`UPDATE rooms SET last_played_position = ? WHERE id = ?`, position, roomID)
+	return err
 }
 
 func (r *RoomSqliteRepo) Delete(id int) error {
@@ -92,15 +93,16 @@ func (r *RoomSqliteRepo) GetQueue(roomID int) ([]models.RoomQueueItem, error) {
 			rt.like_count, 
 			t.id AS track_id, 
 			t.title, 
-			t.artist, 
-			t.cover_url, 
-			t.platform
+			COALESCE(t.artist, '') AS artist, 
+			COALESCE(t.cover_url, '') AS cover_url, 
+			COALESCE(t.platform, '') AS platform,
+			COALESCE(t.source_uri, '') AS source_uri
 		FROM room_tracks rt
 		JOIN tracks t ON rt.track_id = t.id
 		WHERE rt.room_id = ? AND rt.status IN ('queued', 'playing')
 		ORDER BY rt.position ASC
 	`
-	
+
 	var queue []models.RoomQueueItem
 	err := r.db.Select(&queue, query, roomID)
 	if err != nil {
@@ -109,7 +111,7 @@ func (r *RoomSqliteRepo) GetQueue(roomID int) ([]models.RoomQueueItem, error) {
 		}
 		return nil, err
 	}
-	
+
 	return queue, nil
 }
 
@@ -123,15 +125,16 @@ func (r *RoomSqliteRepo) GetProposedQueue(roomID int) ([]models.RoomQueueItem, e
 			rt.like_count, 
 			t.id AS track_id, 
 			t.title, 
-			t.artist, 
-			t.cover_url, 
-			t.platform
+			COALESCE(t.artist, '') AS artist, 
+			COALESCE(t.cover_url, '') AS cover_url, 
+			COALESCE(t.platform, '') AS platform,
+			COALESCE(t.source_uri, '') AS source_uri
 		FROM room_tracks rt
 		JOIN tracks t ON rt.track_id = t.id
 		WHERE rt.room_id = ? AND rt.status = 'proposed'
 		ORDER BY rt.position ASC
 	`
-	
+
 	var queue []models.RoomQueueItem
 	err := r.db.Select(&queue, query, roomID)
 	if err != nil {
@@ -140,7 +143,7 @@ func (r *RoomSqliteRepo) GetProposedQueue(roomID int) ([]models.RoomQueueItem, e
 		}
 		return nil, err
 	}
-	
+
 	return queue, nil
 }
 
@@ -150,8 +153,8 @@ func (r *RoomSqliteRepo) UpdateTrackStatus(roomTrackID int, status string) error
 }
 
 func (r *RoomSqliteRepo) RemoveFromQueue(roomTrackID int) error {
-	log.Println("TODO: implement RoomSqliteRepo.RemoveFromQueue")
-	return nil
+	_, err := r.db.Exec(`DELETE FROM room_tracks WHERE id = ?`, roomTrackID)
+	return err
 }
 
 func (r *RoomSqliteRepo) UpdateTrackPosition(roomTrackID int, newPosition int) error {
@@ -166,5 +169,19 @@ func (r *RoomSqliteRepo) IncrementLikeCount(roomTrackID int) error {
 
 func (r *RoomSqliteRepo) IncrementSkipCount(roomTrackID int) error {
 	log.Println("TODO: implement RoomSqliteRepo.IncrementSkipCount")
+	return nil
+}
+
+func (r *RoomSqliteRepo) UpdateTrackTimestamps(roomTrackID int, startTime *time.Time, endTime *time.Time) error {
+	if startTime != nil && endTime != nil {
+		_, err := r.db.Exec(`UPDATE room_tracks SET start_timestamp = ?, end_timestamp = ? WHERE id = ?`, startTime, endTime, roomTrackID)
+		return err
+	} else if startTime != nil {
+		_, err := r.db.Exec(`UPDATE room_tracks SET start_timestamp = ? WHERE id = ?`, startTime, roomTrackID)
+		return err
+	} else if endTime != nil {
+		_, err := r.db.Exec(`UPDATE room_tracks SET end_timestamp = ? WHERE id = ?`, endTime, roomTrackID)
+		return err
+	}
 	return nil
 }

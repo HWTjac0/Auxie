@@ -62,16 +62,17 @@ type RoomTrack struct {
 }
 
 type RoomQueueItem struct {
-	RoomTrackID int            `db:"room_track_id" json:"room_track_id"`
-	Position    int            `db:"position" json:"position"`
-	Status      TrackStatus    `db:"status" json:"status"`
-	AddedBy     int            `db:"added_by" json:"added_by"`
-	LikeCount   int            `db:"like_count" json:"like_count"`
-	TrackID     int            `db:"track_id" json:"track_id"`
-	Title       string         `db:"title" json:"title"`
-	Artist      sql.NullString `db:"artist" json:"artist"`
-	CoverURL    sql.NullString `db:"cover_url" json:"cover_url"`
-	Platform    sql.NullString `db:"platform" json:"platform"`
+	RoomTrackID int         `db:"room_track_id" json:"room_track_id"`
+	Position    int         `db:"position" json:"position"`
+	Status      TrackStatus `db:"status" json:"status"`
+	AddedBy     int         `db:"added_by" json:"added_by"`
+	LikeCount   int         `db:"like_count" json:"like_count"`
+	TrackID     int         `db:"track_id" json:"track_id"`
+	Title       string      `db:"title" json:"title"`
+	Artist      string      `db:"artist" json:"artist"`
+	CoverURL    string      `db:"cover_url" json:"cover_url"`
+	Platform    string      `db:"platform" json:"platform"`
+	SourceURI   string      `db:"source_uri" json:"source_uri"`
 }
 
 type Archival struct {

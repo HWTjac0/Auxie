@@ -4,27 +4,30 @@ import (
 	"auxie/backend/internal/models"
 	repositories "auxie/backend/internal/repositories"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
 type RoomHandler struct {
-	roomRepo  repositories.RoomRepository
-	userRepo  repositories.UserRepository
-	trackRepo repositories.TrackRepository
-	hub       *RoomHub
+	roomRepo         repositories.RoomRepository
+	userRepo         repositories.UserRepository
+	trackRepo        repositories.TrackRepository
+	hub              *RoomHub
+	playbackManagers map[string]*RoomPlaybackManager
 }
 
 func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.UserRepository, trackRepo repositories.TrackRepository) *RoomHandler {
 	hub := NewRoomHub()
+	playbackManagers := make(map[string]*RoomPlaybackManager)
 
 	type dbEvent struct {
 		isJoin bool
@@ -91,11 +94,21 @@ func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.
 	}
 
 	return &RoomHandler{
-		roomRepo:  roomRepo,
-		userRepo:  userRepo,
-		trackRepo: trackRepo,
-		hub:       hub,
+		roomRepo:         roomRepo,
+		userRepo:         userRepo,
+		trackRepo:        trackRepo,
+		hub:              hub,
+		playbackManagers: playbackManagers,
 	}
+}
+
+func (h *RoomHandler) getOrCreatePlaybackManager(slug string) *RoomPlaybackManager {
+	if m, ok := h.playbackManagers[slug]; ok {
+		return m
+	}
+	m := NewRoomPlaybackManager(h.hub, slug, h.roomRepo, h.trackRepo)
+	h.playbackManagers[slug] = m
+	return m
 }
 
 type AddTrackRequest struct {
@@ -188,6 +201,10 @@ func (h *RoomHandler) AddTrack(c *gin.Context) {
 			},
 		},
 	}
+
+	// Ensure playback manager exists and schedule if idle
+	mgr := h.getOrCreatePlaybackManager(slug)
+	go mgr.StartIfIdle()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Track added", "status": status.String()})
 }
@@ -465,9 +482,16 @@ func (h *RoomHandler) SkipTrack(c *gin.Context) {
 			"payload": gin.H{
 				"track_id": trackToSkip.TrackID,
 				"title":    trackToSkip.Title,
-				"artist":   trackToSkip.Artist.String,
+				"artist":   trackToSkip.Artist,
 			},
 		},
+	}
+
+	// notify playback manager to cancel/start next
+	if mgr := h.getOrCreatePlaybackManager(slug); mgr != nil {
+		go mgr.Skip()
+		// schedule next if any
+		go mgr.StartIfIdle()
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Track skipped successfully"})
@@ -476,7 +500,7 @@ func (h *RoomHandler) SkipTrack(c *gin.Context) {
 func (h *RoomHandler) ApproveTrack(c *gin.Context) {
 	slug := c.Param("slug")
 	roomTrackIDStr := c.Param("track_id")
-	
+
 	_, err := h.roomRepo.GetBySlug(slug)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
@@ -511,7 +535,7 @@ func (h *RoomHandler) ApproveTrack(c *gin.Context) {
 func (h *RoomHandler) RejectTrack(c *gin.Context) {
 	slug := c.Param("slug")
 	roomTrackIDStr := c.Param("track_id")
-	
+
 	_, err := h.roomRepo.GetBySlug(slug)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
@@ -544,7 +568,7 @@ func (h *RoomHandler) RejectTrack(c *gin.Context) {
 func (h *RoomHandler) ChangeUserRole(c *gin.Context) {
 	slug := c.Param("slug")
 	targetUsername := c.Param("username")
-	
+
 	var req struct {
 		Role string `json:"role" binding:"required"`
 	}
@@ -714,9 +738,133 @@ func (h *RoomHandler) HandleWS(c *gin.Context) {
 	}()
 
 	for {
-		_, _, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			break
 		}
+
+		// Expect JSON messages with a `type` field
+		var payload map[string]interface{}
+		if err := json.Unmarshal(msg, &payload); err != nil {
+			// ignore malformed
+			continue
+		}
+
+		typ, _ := payload["type"].(string)
+		switch typ {
+		case "playback:ended":
+			// Client notifies that the currently playing track finished
+			// Prefer room_track_id if present
+			var roomTrackID int
+			if v, ok := payload["room_track_id"].(float64); ok {
+				roomTrackID = int(v)
+			} else {
+				// fallback: mark first playing track as played
+				roomObj, _ := h.roomRepo.GetBySlug(roomSlug)
+				if roomObj != nil {
+					q, _ := h.roomRepo.GetQueue(roomObj.ID)
+					if len(q) > 0 {
+						roomTrackID = q[0].RoomTrackID
+					}
+				}
+			}
+
+			if roomTrackID != 0 {
+				mgr := h.getOrCreatePlaybackManager(roomSlug)
+				mgr.MarkEnded(roomTrackID)
+				// Broadcast to other clients
+				h.hub.broadcast <- &BroadcastMessage{RoomID: roomSlug, Payload: gin.H{"type": "playback:ended", "room_track_id": roomTrackID}}
+				// schedule next
+				go mgr.StartIfIdle()
+			}
+
+		case "playback:position":
+			// client sends position update (seconds)
+			if v, ok := payload["position"].(float64); ok {
+				pos := int(v)
+				roomObj, _ := h.roomRepo.GetBySlug(roomSlug)
+				if roomObj != nil {
+					_ = h.roomRepo.UpdateLastPlayedPosition(roomObj.ID, pos)
+				}
+			}
+
+		case "playback:ready":
+			// client signals readiness - for now, just broadcast ready state
+			h.hub.broadcast <- &BroadcastMessage{RoomID: roomSlug, Payload: gin.H{"type": "playback:ready", "user_id": client.UserID}}
+
+		default:
+			// ignore other message types for now
+		}
 	}
+}
+
+// StreamSpotify returns audio stream for a Spotify track
+func (h *RoomHandler) StreamSpotify(c *gin.Context) {
+	roomTrackID := c.Param("room_track_id")
+	_, err := strconv.Atoi(roomTrackID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid track ID"})
+		return
+	}
+
+	// TODO: Implement actual Spotify audio streaming
+	// For now, return a placeholder error
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error":   "Spotify audio streaming not yet implemented",
+		"message": "Please use the Spotify app to listen to this track",
+	})
+}
+
+// StreamTidal returns audio stream for a Tidal track
+func (h *RoomHandler) StreamTidal(c *gin.Context) {
+	roomTrackID := c.Param("room_track_id")
+	_, err := strconv.Atoi(roomTrackID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid track ID"})
+		return
+	}
+
+	// TODO: Implement actual Tidal audio streaming
+	// For now, return a placeholder error
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error":   "Tidal audio streaming not yet implemented",
+		"message": "Please use the Tidal app to listen to this track",
+	})
+}
+
+// StreamSoundCloud returns audio stream for a SoundCloud track
+func (h *RoomHandler) StreamSoundCloud(c *gin.Context) {
+	roomTrackID := c.Param("room_track_id")
+	_, err := strconv.Atoi(roomTrackID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid track ID"})
+		return
+	}
+
+	// TODO: Implement actual SoundCloud audio streaming
+	// For now, return a placeholder error
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error":   "SoundCloud audio streaming not yet implemented",
+		"message": "Please use the SoundCloud app to listen to this track",
+	})
+}
+
+// GetPlaybackToken returns the Spotify access token for the current user for Web Playback SDK
+func (h *RoomHandler) GetPlaybackToken(c *gin.Context) {
+	userID := c.GetInt("user_id")
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	if user.SpotifyAuthKey.String == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User not connected to Spotify"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token": user.SpotifyAuthKey.String,
+		"token_type":   "Bearer",
+	})
 }

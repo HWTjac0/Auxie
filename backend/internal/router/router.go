@@ -55,6 +55,11 @@ func SetupRouter(a *app.App) *gin.Engine {
 			room.GET("/:slug", a.RoomHandler.GetRoomDetails)
 			room.POST("/join", a.UserHandler.JoinRoom)
 
+			stream := v1.Group("/stream")
+			stream.GET("/spotify/:room_track_id", a.RoomHandler.StreamSpotify)
+			stream.GET("/tidal/:room_track_id", a.RoomHandler.StreamTidal)
+			stream.GET("/soundcloud/:room_track_id", a.RoomHandler.StreamSoundCloud)
+
 			user := v1.Group("/user")
 			user.GET("/random_name", a.UserHandler.GetRandomUserName)
 			user.GET("/logout", a.UserHandler.Logout)
@@ -70,6 +75,7 @@ func SetupRouter(a *app.App) *gin.Engine {
 
 			protected.POST("/room/create", a.RoomHandler.CreateRoom)
 			protected.POST("/room/:slug/track", a.RoomHandler.AddTrack)
+			protected.GET("/playback/token", a.RoomHandler.GetPlaybackToken)
 			protected.POST("/room/:slug/skip", a.RoomHandler.SkipTrack)
 			protected.POST("/room/:slug/user/:username/role", a.RoomHandler.ChangeUserRole)
 			protected.DELETE("/room/:slug/user/:username", a.RoomHandler.KickUser)

@@ -42,6 +42,7 @@ type RoomRepository interface {
 	GetProposedQueue(roomID int) ([]models.RoomQueueItem, error)
 	UpdateTrackStatus(roomTrackID int, status string) error // np. 'playing', 'played'
 	RemoveFromQueue(roomTrackID int) error
+	UpdateTrackTimestamps(roomTrackID int, startTime *time.Time, endTime *time.Time) error
 
 	UpdateTrackPosition(roomTrackID int, newPosition int) error
 

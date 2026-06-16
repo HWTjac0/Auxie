@@ -24,7 +24,7 @@ func NewSpotifyHandler(userRepo repositories.UserRepository, spotifyClient *clie
 }
 
 func (h *SpotifyHandler) Login(c *gin.Context) {
-	scope := "user-read-private user-read-email user-modify-playback-state"
+	scope := "user-read-private user-read-email user-modify-playback-state streaming"
 	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	redirectURI := "http://127.0.0.1:8080/api/v1/auth/spotify/callback"
 
