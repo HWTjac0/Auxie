@@ -12,12 +12,14 @@ import Plus from "../../../components/icons/Plus.svelte";
 import List from "../../../components/icons/List.svelte";
 import Users from "../../../components/icons/Users.svelte";
 import type { Component } from "svelte";
+import { onMount } from "svelte";
 
 let { data }: PageProps = $props();
 
 let inviteDialog: any = $state(null);
 let searchDialog: any = $state(null);
 let searchQuery: string = $state("");
+let activeUsers = $state<any[]>(data.users || []);
 
 type Tab = {
   label: string;
@@ -28,6 +30,45 @@ let tabs: Array<Tab> = [
   { label: "Users", icon: Users },
 ];
 let activeTabIdx = $state(0);
+
+onMount(() => {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${protocol}//127.0.0.1:8080/api/v1/room/${data.slug}/ws`;
+
+  const socket = new WebSocket(wsUrl);
+
+  socket.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      console.log("WS message:", msg);
+
+      if (msg.type === "USER_JOINED") {
+        const joinedUser = msg.payload;
+        if (!activeUsers.some((u) => u.Username === joinedUser.username)) {
+          activeUsers = [
+            ...activeUsers,
+            {
+              Username: joinedUser.username,
+              CurrentRole: "Guest",
+              AvatarUrl: "",
+            },
+          ];
+        }
+      } else if (msg.type === "USER_LEFT") {
+        const leftUser = msg.payload;
+        activeUsers = activeUsers.filter(
+          (u) => u.Username !== leftUser.username,
+        );
+      }
+    } catch (e) {
+      console.error("Failed to parse WS message:", e);
+    }
+  };
+
+  return () => {
+    socket.close();
+  };
+});
 </script>
 
 <div class="room_wrapper">
@@ -78,7 +119,7 @@ let activeTabIdx = $state(0);
           {#if activeTabIdx === 0}
             <QueueTab />
           {:else if activeTabIdx === 1}
-            <UsersTab users={data.users!} />
+            <UsersTab users={activeUsers} />
           {/if}
         </div>
       </div>

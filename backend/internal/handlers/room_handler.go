@@ -4,6 +4,7 @@ import (
 	"auxie/backend/internal/models"
 	repositories "auxie/backend/internal/repositories"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"net/http"
 	"strings"
@@ -16,10 +17,15 @@ import (
 type RoomHandler struct {
 	roomRepo repositories.RoomRepository
 	userRepo repositories.UserRepository
+	hub      *RoomHub
 }
 
 func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.UserRepository) *RoomHandler {
-	return &RoomHandler{roomRepo: roomRepo, userRepo: userRepo}
+	return &RoomHandler{
+		roomRepo: roomRepo,
+		userRepo: userRepo,
+		hub:      NewRoomHub(),
+	}
 }
 
 func (h *RoomHandler) GetRandomRoomName(c *gin.Context) {
@@ -242,4 +248,76 @@ func (h *RoomHandler) ChangeTrackPosition(room_id int, track_id int, new_positio
 
 func (h *RoomHandler) NextTrackInRoom(room_id int) (int, error) {
 	return 0, nil
+}
+
+func (h *RoomHandler) HandleWS(c *gin.Context) {
+	roomSlug := c.Param("slug")
+	userID := c.GetInt("user_id")
+
+	// Verify room exists
+	_, err := h.roomRepo.GetBySlug(roomSlug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	// Fetch user details
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Printf("Failed to upgrade connection to websocket: %v", err)
+		return
+	}
+
+	client := &WSClient{
+		Conn:     conn,
+		UserID:   user.ID,
+		Username: user.Username,
+		Send:     make(chan interface{}, 256),
+	}
+
+	// Register client in the hub
+	h.hub.register <- &Subscription{RoomID: roomSlug, Client: client}
+
+	// Start client's write pump
+	go client.WritePump()
+
+	// Broadcast user joined event to the room
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: roomSlug,
+		Payload: gin.H{
+			"type": "USER_JOINED",
+			"payload": gin.H{
+				"user_id":  user.ID,
+				"username": user.Username,
+			},
+		},
+	}
+
+	// Read loop (to detect disconnection)
+	defer func() {
+		h.hub.unregister <- &Subscription{RoomID: roomSlug, Client: client}
+		h.hub.broadcast <- &BroadcastMessage{
+			RoomID: roomSlug,
+			Payload: gin.H{
+				"type": "USER_LEFT",
+				"payload": gin.H{
+					"user_id":  user.ID,
+					"username": user.Username,
+				},
+			},
+		}
+	}()
+
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			break
+		}
+	}
 }
