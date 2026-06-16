@@ -3,6 +3,7 @@ import MusicalNote from "./icons/MusicalNote.svelte";
 import SkipForward from "./icons/SkipForward.svelte";
 import Check from "./icons/Check.svelte";
 import Cross from "./icons/Cross.svelte";
+import ThumbsUp from "./icons/ThumbsUp.svelte";
 
 let { queue = [], proposedQueue = [], currentUser, slug }: { queue?: any[], proposedQueue?: any[], currentUser?: any, slug?: string } = $props();
 
@@ -13,6 +14,34 @@ let canManage = $derived(currentUser?.CurrentRole === "Host" || currentUser?.Cur
 
 let isSkipping = $state(false);
 let isApproving = $state(false);
+let isVotingSkip = $state(false);
+
+// Track liked state per roomTrackId
+let likedTracks = $state<Set<number>>(new Set());
+let likeCounts = $state<Record<number, number>>({});
+// skip vote state
+let skipVoteCount = $state(0);
+let skipVoteThreshold = $state(0);
+let hasVotedSkip = $state(false);
+
+// Sync likeCounts from queue
+$effect(() => {
+    const counts: Record<number, number> = {};
+    for (const t of queue) {
+        counts[t.room_track_id] = t.like_count ?? 0;
+    }
+    likeCounts = counts;
+});
+
+// Reset skip vote state when track changes
+$effect(() => {
+    const id = currentlyPlaying?.room_track_id;
+    if (id) {
+        skipVoteCount = 0;
+        skipVoteThreshold = 0;
+        hasVotedSkip = false;
+    }
+});
 
 async function skipTrack() {
     if (!slug || isSkipping || !canManage) return;
@@ -24,6 +53,65 @@ async function skipTrack() {
         console.error(err);
     } finally {
         isSkipping = false;
+    }
+}
+
+async function voteSkip() {
+    if (!slug || isVotingSkip || hasVotedSkip) return;
+    isVotingSkip = true;
+    try {
+        const res = await fetch(`/api/v1/room/${slug}/vote-skip`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            hasVotedSkip = true;
+            skipVoteCount = data.votes;
+            skipVoteThreshold = data.threshold;
+        }
+    } catch(err) {
+        console.error(err);
+    } finally {
+        isVotingSkip = false;
+    }
+}
+
+async function likeTrack(roomTrackId: number) {
+    if (!slug) return;
+    try {
+        const res = await fetch(`/api/v1/room/${slug}/track/${roomTrackId}/like`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            const newSet = new Set(likedTracks);
+            if (data.liked) {
+                newSet.add(roomTrackId);
+                likeCounts = { ...likeCounts, [roomTrackId]: (likeCounts[roomTrackId] ?? 0) + 1 };
+            } else {
+                newSet.delete(roomTrackId);
+                likeCounts = { ...likeCounts, [roomTrackId]: Math.max(0, (likeCounts[roomTrackId] ?? 1) - 1) };
+            }
+            likedTracks = newSet;
+        }
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+// Called from parent when WS events arrive
+export function onWsMessage(msg: any) {
+    if (msg.type === "TRACK_LIKED") {
+        const { room_track_id, liked } = msg.payload;
+        const newSet = new Set(likedTracks);
+        if (liked) {
+            likeCounts = { ...likeCounts, [room_track_id]: (likeCounts[room_track_id] ?? 0) + 1 };
+        } else {
+            likeCounts = { ...likeCounts, [room_track_id]: Math.max(0, (likeCounts[room_track_id] ?? 1) - 1) };
+        }
+        likedTracks = newSet;
+    } else if (msg.type === "SKIP_VOTE") {
+        const { room_track_id, votes, threshold } = msg.payload;
+        if (currentlyPlaying?.room_track_id === room_track_id) {
+            skipVoteCount = votes;
+            skipVoteThreshold = threshold;
+        }
     }
 }
 
@@ -102,6 +190,35 @@ async function handleProposed(trackId: number, action: 'approve' | 'reject') {
            {/if}
         </div>
       </div>
+
+      <div class="track-voting">
+        <button
+          class="vote-btn like-btn {likedTracks.has(currentlyPlaying.room_track_id) ? 'active' : ''}"
+          onclick={() => likeTrack(currentlyPlaying.room_track_id)}
+          title="Like this track"
+        >
+          <ThumbsUp size={16} color="currentColor" />
+          <span>{likeCounts[currentlyPlaying.room_track_id] ?? currentlyPlaying.like_count ?? 0}</span>
+        </button>
+
+        {#if !canManage}
+          <button
+            class="vote-btn skip-vote-btn {hasVotedSkip ? 'voted' : ''}"
+            onclick={voteSkip}
+            disabled={hasVotedSkip || isVotingSkip}
+            title={hasVotedSkip ? "You voted to skip" : "Vote to skip this track"}
+          >
+            <SkipForward size={16} color="currentColor" />
+            <span>
+              {#if skipVoteThreshold > 0}
+                Skip {skipVoteCount}/{skipVoteThreshold}
+              {:else}
+                Vote skip
+              {/if}
+            </span>
+          </button>
+        {/if}
+      </div>
     </div>
 
     {#if upNext.length > 0}
@@ -115,6 +232,14 @@ async function handleProposed(trackId: number, action: 'approve' | 'reject') {
                 <h4 class="onest-500">{track.title}</h4>
                 <p class="onest-300">{track.artist?.String || track.artist || "Unknown Artist"}</p>
               </div>
+              <button
+                class="like-small {likedTracks.has(track.room_track_id) ? 'active' : ''}"
+                onclick={() => likeTrack(track.room_track_id)}
+                title="Like"
+              >
+                <ThumbsUp size={14} color="currentColor" />
+                <span>{likeCounts[track.room_track_id] ?? track.like_count ?? 0}</span>
+              </button>
             </div>
           {/each}
         </div>
@@ -393,5 +518,84 @@ async function handleProposed(trackId: number, action: 'approve' | 'reject') {
   .action-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  /* Voting row */
+  .track-voting {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 0 2px;
+  }
+
+  .vote-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--auxie-cloud-white-400);
+    font-family: "Onest", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .vote-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--auxie-cloud-white-100);
+  }
+
+  .vote-btn.like-btn.active {
+    background: rgba(0, 255, 135, 0.12);
+    border-color: var(--auxie-intense-mint-500);
+    color: var(--auxie-intense-mint-500);
+  }
+
+  .vote-btn.skip-vote-btn {
+    color: var(--auxie-cloud-white-400);
+  }
+
+  .vote-btn.skip-vote-btn.voted {
+    background: rgba(138, 43, 226, 0.12);
+    border-color: var(--auxie-electric-purple-500);
+    color: var(--auxie-electric-purple-400);
+    cursor: default;
+  }
+
+  .vote-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  /* Like button on queue items */
+  .like-small {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    color: var(--auxie-cloud-white-500);
+    font-family: "Onest", sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .like-small:hover {
+    background: rgba(0, 255, 135, 0.08);
+    color: var(--auxie-intense-mint-400);
+  }
+
+  .like-small.active {
+    background: rgba(0, 255, 135, 0.12);
+    border-color: var(--auxie-intense-mint-500);
+    color: var(--auxie-intense-mint-500);
   }
 </style>

@@ -77,6 +77,8 @@ func SetupRouter(a *app.App) *gin.Engine {
 			protected.POST("/room/:slug/track", a.RoomHandler.AddTrack)
 			protected.GET("/playback/token", a.RoomHandler.GetPlaybackToken)
 			protected.POST("/room/:slug/skip", a.RoomHandler.SkipTrack)
+			protected.POST("/room/:slug/vote-skip", a.RoomHandler.VoteSkip)
+			protected.POST("/room/:slug/track/:track_id/like", a.RoomHandler.LikeTrack)
 			protected.POST("/room/:slug/user/:username/role", a.RoomHandler.ChangeUserRole)
 			protected.DELETE("/room/:slug/user/:username", a.RoomHandler.KickUser)
 			protected.POST("/room/:slug/proposed/:track_id/approve", a.RoomHandler.ApproveTrack)

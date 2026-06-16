@@ -463,7 +463,8 @@ func (h *RoomHandler) SkipTrack(c *gin.Context) {
 
 	queue, err := h.roomRepo.GetQueue(room.ID)
 	if err != nil || len(queue) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No track currently playing"})
+		// Nothing to skip — treat as success
+		c.JSON(http.StatusOK, gin.H{"message": "No track to skip"})
 		return
 	}
 
@@ -474,6 +475,9 @@ func (h *RoomHandler) SkipTrack(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to skip track"})
 		return
 	}
+
+	now := time.Now()
+	_ = h.roomRepo.UpdateTrackTimestamps(trackToSkip.RoomTrackID, nil, &now)
 
 	h.hub.broadcast <- &BroadcastMessage{
 		RoomID: slug,
@@ -487,14 +491,188 @@ func (h *RoomHandler) SkipTrack(c *gin.Context) {
 		},
 	}
 
+	// Broadcast queue emptied if no more tracks
+	remainingQueue, _ := h.roomRepo.GetQueue(room.ID)
+	if len(remainingQueue) == 0 {
+		h.hub.broadcast <- &BroadcastMessage{
+			RoomID:  slug,
+			Payload: gin.H{"type": "playback:queue_empty"},
+		}
+	}
+
 	// notify playback manager to cancel/start next
 	if mgr := h.getOrCreatePlaybackManager(slug); mgr != nil {
 		go mgr.Skip()
-		// schedule next if any
 		go mgr.StartIfIdle()
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Track skipped successfully"})
+}
+
+func (h *RoomHandler) LikeTrack(c *gin.Context) {
+	slug := c.Param("slug")
+	roomTrackIDStr := c.Param("track_id")
+	userID := c.GetInt("user_id")
+
+	room, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+	_ = room
+
+	roomTrackID, err := strconv.Atoi(roomTrackIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid track ID"})
+		return
+	}
+
+	alreadyLiked, err := h.roomRepo.HasUserLiked(roomTrackID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+		return
+	}
+
+	if alreadyLiked {
+		// Toggle off
+		if err := h.roomRepo.RemoveLike(roomTrackID, userID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove like"})
+			return
+		}
+		if err := h.roomRepo.DecrementLikeCount(roomTrackID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrement like"})
+			return
+		}
+		h.hub.broadcast <- &BroadcastMessage{
+			RoomID:  slug,
+			Payload: gin.H{"type": "TRACK_LIKED", "payload": gin.H{"room_track_id": roomTrackID, "liked": false}},
+		}
+		c.JSON(http.StatusOK, gin.H{"liked": false})
+		return
+	}
+
+	if err := h.roomRepo.AddLike(roomTrackID, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add like"})
+		return
+	}
+	if err := h.roomRepo.IncrementLikeCount(roomTrackID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to increment like"})
+		return
+	}
+
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID:  slug,
+		Payload: gin.H{"type": "TRACK_LIKED", "payload": gin.H{"room_track_id": roomTrackID, "liked": true}},
+	}
+	c.JSON(http.StatusOK, gin.H{"liked": true})
+}
+
+func (h *RoomHandler) VoteSkip(c *gin.Context) {
+	slug := c.Param("slug")
+	userID := c.GetInt("user_id")
+
+	room, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	queue, err := h.roomRepo.GetQueue(room.ID)
+	if err != nil || len(queue) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No track currently playing"})
+		return
+	}
+
+	currentTrack := queue[0]
+	roomTrackID := currentTrack.RoomTrackID
+
+	alreadyVoted, err := h.roomRepo.HasUserVotedSkip(roomTrackID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+		return
+	}
+	if alreadyVoted {
+		c.JSON(http.StatusConflict, gin.H{"error": "Already voted to skip"})
+		return
+	}
+
+	if err := h.roomRepo.AddSkipVote(roomTrackID, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register vote"})
+		return
+	}
+	if err := h.roomRepo.IncrementSkipCount(roomTrackID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to increment skip count"})
+		return
+	}
+
+	voteCount, err := h.roomRepo.GetSkipVoteCount(roomTrackID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+		return
+	}
+
+	// Count users in room
+	users, err := h.userRepo.GetUsersInRoom(room.ID, nil)
+	usersInRoom := len(users)
+	if err != nil || usersInRoom == 0 {
+		usersInRoom = 1
+	}
+
+	// Threshold: majority (>50%), minimum 2 votes
+	threshold := usersInRoom/2 + 1
+	if threshold < 2 {
+		threshold = 2
+	}
+
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: slug,
+		Payload: gin.H{
+			"type": "SKIP_VOTE",
+			"payload": gin.H{
+				"room_track_id": roomTrackID,
+				"votes":         voteCount,
+				"threshold":     threshold,
+			},
+		},
+	}
+
+	if voteCount >= threshold {
+		// Auto-skip
+		_ = h.roomRepo.UpdateTrackStatus(roomTrackID, "skipped")
+		now := time.Now()
+		_ = h.roomRepo.UpdateTrackTimestamps(roomTrackID, nil, &now)
+
+		h.hub.broadcast <- &BroadcastMessage{
+			RoomID: slug,
+			Payload: gin.H{
+				"type": "TRACK_SKIPPED",
+				"payload": gin.H{
+					"track_id": currentTrack.TrackID,
+					"title":    currentTrack.Title,
+					"artist":   currentTrack.Artist,
+					"by_vote":  true,
+				},
+			},
+		}
+
+		remainingQueue, _ := h.roomRepo.GetQueue(room.ID)
+		if len(remainingQueue) == 0 {
+			h.hub.broadcast <- &BroadcastMessage{
+				RoomID:  slug,
+				Payload: gin.H{"type": "playback:queue_empty"},
+			}
+		}
+
+		if mgr := h.getOrCreatePlaybackManager(slug); mgr != nil {
+			go mgr.Skip()
+			go mgr.StartIfIdle()
+		}
+
+		c.JSON(http.StatusOK, gin.H{"skipped": true, "votes": voteCount, "threshold": threshold})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"skipped": false, "votes": voteCount, "threshold": threshold})
 }
 
 func (h *RoomHandler) ApproveTrack(c *gin.Context) {

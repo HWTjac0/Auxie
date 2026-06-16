@@ -163,13 +163,57 @@ func (r *RoomSqliteRepo) UpdateTrackPosition(roomTrackID int, newPosition int) e
 }
 
 func (r *RoomSqliteRepo) IncrementLikeCount(roomTrackID int) error {
-	log.Println("TODO: implement RoomSqliteRepo.IncrementLikeCount")
-	return nil
+	_, err := r.db.Exec(`UPDATE room_tracks SET like_count = like_count + 1 WHERE id = ?`, roomTrackID)
+	return err
+}
+
+func (r *RoomSqliteRepo) DecrementLikeCount(roomTrackID int) error {
+	_, err := r.db.Exec(`UPDATE room_tracks SET like_count = MAX(0, like_count - 1) WHERE id = ?`, roomTrackID)
+	return err
 }
 
 func (r *RoomSqliteRepo) IncrementSkipCount(roomTrackID int) error {
-	log.Println("TODO: implement RoomSqliteRepo.IncrementSkipCount")
-	return nil
+	_, err := r.db.Exec(`UPDATE room_tracks SET skip_count = skip_count + 1 WHERE id = ?`, roomTrackID)
+	return err
+}
+
+func (r *RoomSqliteRepo) GetSkipCount(roomTrackID int) (int, error) {
+	var count int
+	err := r.db.Get(&count, `SELECT skip_count FROM room_tracks WHERE id = ?`, roomTrackID)
+	return count, err
+}
+
+func (r *RoomSqliteRepo) HasUserLiked(roomTrackID int, userID int) (bool, error) {
+	var count int
+	err := r.db.Get(&count, `SELECT COUNT(*) FROM room_track_likes WHERE room_track_id = ? AND user_id = ?`, roomTrackID, userID)
+	return count > 0, err
+}
+
+func (r *RoomSqliteRepo) AddLike(roomTrackID int, userID int) error {
+	_, err := r.db.Exec(`INSERT OR IGNORE INTO room_track_likes (room_track_id, user_id) VALUES (?, ?)`, roomTrackID, userID)
+	return err
+}
+
+func (r *RoomSqliteRepo) RemoveLike(roomTrackID int, userID int) error {
+	_, err := r.db.Exec(`DELETE FROM room_track_likes WHERE room_track_id = ? AND user_id = ?`, roomTrackID, userID)
+	return err
+}
+
+func (r *RoomSqliteRepo) HasUserVotedSkip(roomTrackID int, userID int) (bool, error) {
+	var count int
+	err := r.db.Get(&count, `SELECT COUNT(*) FROM room_track_skip_votes WHERE room_track_id = ? AND user_id = ?`, roomTrackID, userID)
+	return count > 0, err
+}
+
+func (r *RoomSqliteRepo) AddSkipVote(roomTrackID int, userID int) error {
+	_, err := r.db.Exec(`INSERT OR IGNORE INTO room_track_skip_votes (room_track_id, user_id) VALUES (?, ?)`, roomTrackID, userID)
+	return err
+}
+
+func (r *RoomSqliteRepo) GetSkipVoteCount(roomTrackID int) (int, error) {
+	var count int
+	err := r.db.Get(&count, `SELECT COUNT(*) FROM room_track_skip_votes WHERE room_track_id = ?`, roomTrackID)
+	return count, err
 }
 
 func (r *RoomSqliteRepo) UpdateTrackTimestamps(roomTrackID int, startTime *time.Time, endTime *time.Time) error {

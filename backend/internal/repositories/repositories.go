@@ -47,7 +47,17 @@ type RoomRepository interface {
 	UpdateTrackPosition(roomTrackID int, newPosition int) error
 
 	IncrementLikeCount(roomTrackID int) error
+	DecrementLikeCount(roomTrackID int) error
 	IncrementSkipCount(roomTrackID int) error
+	GetSkipCount(roomTrackID int) (int, error)
+
+	HasUserLiked(roomTrackID int, userID int) (bool, error)
+	AddLike(roomTrackID int, userID int) error
+	RemoveLike(roomTrackID int, userID int) error
+
+	HasUserVotedSkip(roomTrackID int, userID int) (bool, error)
+	AddSkipVote(roomTrackID int, userID int) error
+	GetSkipVoteCount(roomTrackID int) (int, error)
 }
 
 type TrackRepository interface {
