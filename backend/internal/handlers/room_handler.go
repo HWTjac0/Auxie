@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"strconv"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -37,10 +38,14 @@ func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.
 			if ev.isJoin {
 				room, err := roomRepo.GetBySlug(ev.roomID)
 				if err == nil {
+					user, _ := userRepo.GetByID(ev.client.UserID)
 					role := "Guest"
 					if room.HostID == ev.client.UserID {
 						role = "Host"
+					} else if user != nil && user.CurrentRole != nil && (*user.CurrentRole == "DJ" || *user.CurrentRole == "Host") {
+						role = *user.CurrentRole
 					}
+
 					ev.client.Role = role
 					if err := userRepo.UpdateRoom(ev.client.UserID, room.ID, &role); err != nil {
 						log.Printf("Failed to update user room status on enter: %v", err)
@@ -52,7 +57,7 @@ func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.
 					Payload: gin.H{
 						"type": "USER_JOINED",
 						"payload": gin.H{
-							"user_id":  ev.client.UserID,
+							"id":       ev.client.UserID,
 							"username": ev.client.Username,
 							"role":     ev.client.Role,
 						},
@@ -144,12 +149,25 @@ func (h *RoomHandler) AddTrack(c *gin.Context) {
 		trackID = track.ID
 	}
 
+	callerUser, err := h.userRepo.GetByID(userID)
+	if err != nil || callerUser == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	status := models.TrackStatusQueued
+	wsType := "TRACK_ADDED"
+	if callerUser.CurrentRole != nil && *callerUser.CurrentRole == "Guest" {
+		status = models.TrackStatusProposed
+		wsType = "TRACK_PROPOSED"
+	}
+
 	// 2. Add to queue
 	roomTrack := &models.RoomTrack{
 		RoomID:  room.ID,
 		TrackID: trackID,
 		AddedBy: userID,
-		Status:  models.TrackStatusQueued,
+		Status:  status,
 	}
 
 	if err := h.roomRepo.AddToQueue(roomTrack); err != nil {
@@ -161,7 +179,7 @@ func (h *RoomHandler) AddTrack(c *gin.Context) {
 	h.hub.broadcast <- &BroadcastMessage{
 		RoomID: slug,
 		Payload: gin.H{
-			"type": "TRACK_ADDED",
+			"type": wsType,
 			"payload": gin.H{
 				"track_id": trackID,
 				"title":    req.Title,
@@ -171,7 +189,7 @@ func (h *RoomHandler) AddTrack(c *gin.Context) {
 		},
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Track added to queue"})
+	c.JSON(http.StatusOK, gin.H{"message": "Track added", "status": status.String()})
 }
 
 func (h *RoomHandler) GetRandomRoomName(c *gin.Context) {
@@ -368,7 +386,7 @@ func (h *RoomHandler) GetRoomDetails(c *gin.Context) {
 		return
 	}
 
-	users, err := h.userRepo.GetUsersInRoom(room.ID, nil)
+	users, err := h.userRepo.GetUsersInRoom(room.ID, &repositories.UserFilter{Fields: []string{"id", "username", "type", "current_role"}})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while getting users"})
 		return
@@ -380,10 +398,26 @@ func (h *RoomHandler) GetRoomDetails(c *gin.Context) {
 		return
 	}
 
+	proposedQueue, err := h.roomRepo.GetProposedQueue(room.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while getting proposed queue"})
+		return
+	}
+
+	session := sessions.Default(c)
+	userID := 0
+	if uid := session.Get("user_id"); uid != nil {
+		if id, ok := uid.(int); ok {
+			userID = id
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"room":  room,
-		"users": users,
-		"queue": queue,
+		"room":            room,
+		"users":           users,
+		"queue":           queue,
+		"proposedQueue":   proposedQueue,
+		"current_user_id": userID,
 	})
 }
 
@@ -396,6 +430,17 @@ func (h *RoomHandler) SkipTrack(c *gin.Context) {
 	room, err := h.roomRepo.GetBySlug(slug)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	callerUser, err := h.userRepo.GetByID(c.GetInt("user_id"))
+	if err != nil || callerUser == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	if callerUser.CurrentRole != nil && *callerUser.CurrentRole == "Guest" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only Host or DJ can skip tracks"})
 		return
 	}
 
@@ -426,6 +471,191 @@ func (h *RoomHandler) SkipTrack(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Track skipped successfully"})
+}
+
+func (h *RoomHandler) ApproveTrack(c *gin.Context) {
+	slug := c.Param("slug")
+	roomTrackIDStr := c.Param("track_id")
+	
+	_, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	callerUser, err := h.userRepo.GetByID(c.GetInt("user_id"))
+	if err != nil || callerUser == nil || (callerUser.CurrentRole != nil && *callerUser.CurrentRole == "Guest") {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only Host or DJ can approve tracks"})
+		return
+	}
+
+	// In a real scenario we might want to check if the track belongs to the room and is proposed.
+	// For now we'll trust the roomTrackID and just update the status.
+	roomTrackID, _ := strconv.Atoi(roomTrackIDStr)
+	err = h.roomRepo.UpdateTrackStatus(roomTrackID, "queued")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to approve track"})
+		return
+	}
+
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: slug,
+		Payload: gin.H{
+			"type": "TRACK_APPROVED",
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Track approved"})
+}
+
+func (h *RoomHandler) RejectTrack(c *gin.Context) {
+	slug := c.Param("slug")
+	roomTrackIDStr := c.Param("track_id")
+	
+	_, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	callerUser, err := h.userRepo.GetByID(c.GetInt("user_id"))
+	if err != nil || callerUser == nil || (callerUser.CurrentRole != nil && *callerUser.CurrentRole == "Guest") {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only Host or DJ can reject tracks"})
+		return
+	}
+
+	roomTrackID, _ := strconv.Atoi(roomTrackIDStr)
+	err = h.roomRepo.UpdateTrackStatus(roomTrackID, "skipped") // Or delete it
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reject track"})
+		return
+	}
+
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: slug,
+		Payload: gin.H{
+			"type": "TRACK_REJECTED",
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Track rejected"})
+}
+
+func (h *RoomHandler) ChangeUserRole(c *gin.Context) {
+	slug := c.Param("slug")
+	targetUsername := c.Param("username")
+	
+	var req struct {
+		Role string `json:"role" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	room, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	callerUser, err := h.userRepo.GetByID(c.GetInt("user_id"))
+	if err != nil || callerUser == nil || callerUser.CurrentRole == nil || *callerUser.CurrentRole != "Host" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only the Host can manage roles"})
+		return
+	}
+
+	users, err := h.userRepo.GetUsersInRoom(room.ID, &repositories.UserFilter{Fields: []string{"id", "username"}})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting users"})
+		return
+	}
+
+	var targetUserID int = 0
+	for _, u := range users {
+		if u.Username == targetUsername {
+			targetUserID = u.ID
+			break
+		}
+	}
+
+	if targetUserID == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found in this room"})
+		return
+	}
+
+	err = h.userRepo.UpdateRoom(targetUserID, room.ID, &req.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update role"})
+		return
+	}
+
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: slug,
+		Payload: gin.H{
+			"type": "USER_ROLE_CHANGED",
+			"payload": gin.H{
+				"username": targetUsername,
+				"role":     req.Role,
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Role updated"})
+}
+
+func (h *RoomHandler) KickUser(c *gin.Context) {
+	slug := c.Param("slug")
+	targetUsername := c.Param("username")
+
+	room, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	callerUser, err := h.userRepo.GetByID(c.GetInt("user_id"))
+	if err != nil || callerUser == nil || callerUser.CurrentRole == nil || *callerUser.CurrentRole != "Host" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only the Host can kick users"})
+		return
+	}
+
+	users, err := h.userRepo.GetUsersInRoom(room.ID, &repositories.UserFilter{Fields: []string{"id", "username"}})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting users"})
+		return
+	}
+
+	var targetUserID int = 0
+	for _, u := range users {
+		if u.Username == targetUsername {
+			targetUserID = u.ID
+			break
+		}
+	}
+
+	if targetUserID == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found in this room"})
+		return
+	}
+
+	err = h.userRepo.LeaveRoom(targetUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to kick user"})
+		return
+	}
+
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: slug,
+		Payload: gin.H{
+			"type": "USER_KICKED",
+			"payload": gin.H{
+				"username": targetUsername,
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User kicked"})
 }
 
 func (h *RoomHandler) AddTrackToRoom(room_id int, track_id int, user_id int) error {

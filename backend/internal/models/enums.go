@@ -12,6 +12,7 @@ const (
 	TrackStatusPlaying
 	TrackStatusSkipped
 	TrackStatusPlayed
+	TrackStatusProposed
 )
 
 type MusicService int
@@ -33,10 +34,11 @@ func (m MusicService) String() string {
 }
 
 var trackStatusName = map[TrackStatus]string{
-	TrackStatusQueued:  "queued",
-	TrackStatusPlaying: "playing",
-	TrackStatusSkipped: "skipped",
-	TrackStatusPlayed:  "played",
+	TrackStatusQueued:   "queued",
+	TrackStatusPlaying:  "playing",
+	TrackStatusSkipped:  "skipped",
+	TrackStatusPlayed:   "played",
+	TrackStatusProposed: "proposed",
 }
 
 func (s TrackStatus) String() string {
@@ -63,6 +65,8 @@ func (s *TrackStatus) Scan(value any) error {
 		*s = TrackStatusSkipped
 	case "played":
 		*s = TrackStatusPlayed
+	case "proposed":
+		*s = TrackStatusProposed
 	default:
 		return fmt.Errorf("unknown track status: %s", strVal)
 	}

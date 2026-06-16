@@ -1,33 +1,72 @@
 <script lang="ts">
 import MusicalNote from "./icons/MusicalNote.svelte";
 import SkipForward from "./icons/SkipForward.svelte";
+import Check from "./icons/Check.svelte";
+import Cross from "./icons/Cross.svelte";
 
-let { queue = [], slug }: { queue?: any[], slug?: string } = $props();
+let { queue = [], proposedQueue = [], currentUser, slug }: { queue?: any[], proposedQueue?: any[], currentUser?: any, slug?: string } = $props();
 
 let currentlyPlaying = $derived(queue.length > 0 ? queue[0] : null);
 let upNext = $derived(queue.length > 1 ? queue.slice(1) : []);
 
+let canManage = $derived(currentUser?.CurrentRole === "Host" || currentUser?.CurrentRole === "DJ");
+
 let isSkipping = $state(false);
+let isApproving = $state(false);
 
 async function skipTrack() {
-    if (!slug || isSkipping) return;
+    if (!slug || isSkipping || !canManage) return;
     isSkipping = true;
     try {
-        const res = await fetch(`/api/v1/room/${slug}/skip`, {
-            method: 'POST'
-        });
-        if (!res.ok) {
-            console.error("Failed to skip track");
-        }
+        const res = await fetch(`/api/v1/room/${slug}/skip`, { method: 'POST' });
+        if (!res.ok) console.error("Failed to skip track");
     } catch(err) {
         console.error(err);
     } finally {
         isSkipping = false;
     }
 }
+
+async function handleProposed(trackId: number, action: 'approve' | 'reject') {
+    if (!slug || isApproving || !canManage) return;
+    isApproving = true;
+    try {
+        const res = await fetch(`/api/v1/room/${slug}/proposed/${trackId}/${action}`, { method: 'POST' });
+        if (!res.ok) console.error(`Failed to ${action} track`);
+    } catch(err) {
+        console.error(err);
+    } finally {
+        isApproving = false;
+    }
+}
 </script>
 
 <div class="queue-tab">
+  {#if canManage && proposedQueue.length > 0}
+    <div class="proposed-queue">
+      <h3 class="section-title onest-500">Proposed by Guests ({proposedQueue.length})</h3>
+      <div class="next-list">
+        {#each proposedQueue as track (track.room_track_id)}
+          <div class="next-item proposed-item">
+            <img src={track.cover_url?.String || track.cover_url || "/placeholder.png"} alt={track.title} class="next-cover" />
+            <div class="next-info">
+              <h4 class="onest-500">{track.title}</h4>
+              <p class="onest-300">{track.artist?.String || track.artist || "Unknown Artist"}</p>
+            </div>
+            <div class="proposed-actions">
+              <button class="action-btn approve" onclick={() => handleProposed(track.room_track_id, 'approve')} disabled={isApproving}>
+                <Check size={20} color="currentColor" />
+              </button>
+              <button class="action-btn reject" onclick={() => handleProposed(track.room_track_id, 'reject')} disabled={isApproving}>
+                <Cross size={20} color="currentColor" />
+              </button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
   <div class="queue-header">
     <h2 class="onest-500">Queue</h2>
   </div>
@@ -56,9 +95,11 @@ async function skipTrack() {
              <div class="bar"></div>
            </div>
            
-           <button class="skip-btn" onclick={skipTrack} disabled={isSkipping} title="Skip Track">
-             <SkipForward size={24} color="var(--auxie-cloud-white-50)" />
-           </button>
+           {#if canManage}
+             <button class="skip-btn" onclick={skipTrack} disabled={isSkipping} title="Skip Track">
+               <SkipForward size={24} color="var(--auxie-cloud-white-50)" />
+             </button>
+           {/if}
         </div>
       </div>
     </div>
@@ -294,5 +335,63 @@ async function skipTrack() {
     font-size: 14px;
     max-width: 250px;
     line-height: 1.4;
+  }
+
+  .proposed-queue {
+    margin-bottom: 25px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 15px;
+  }
+
+  .proposed-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+  }
+
+  .proposed-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: bold;
+    color: white;
+    transition: all 0.2s;
+  }
+
+  .action-btn.approve {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+  }
+
+  .action-btn.approve:hover:not(:disabled) {
+    background: rgba(46, 204, 113, 0.4);
+    transform: scale(1.1);
+  }
+
+  .action-btn.reject {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+  }
+
+  .action-btn.reject:hover:not(:disabled) {
+    background: rgba(231, 76, 60, 0.4);
+    transform: scale(1.1);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

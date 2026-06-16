@@ -22,12 +22,34 @@ let searchDialog: any = $state(null);
 let searchQuery: string = $state("");
 let activeUsers = $state<any[]>(data.users || []);
 let queue = $state<any[]>(data.queue || []);
+let proposedQueue = $state<any[]>(data.proposedQueue || []);
 
-async function fetchQueue() {
+let currentUserId = $state(data.currentUserId || 0);
+
+let currentUser = $derived(activeUsers.find(u => u.ID === currentUserId || u.id === currentUserId));
+
+$effect(() => {
+  console.log("DEBUG: currentUserId =", currentUserId);
+  console.log("DEBUG: activeUsers =", $state.snapshot(activeUsers));
+  console.log("DEBUG: currentUser =", currentUser);
+});
+
+async function fetchRoomData() {
   const res = await fetch(`/api/v1/room/${data.slug}`);
   if (res.ok) {
     const json = await res.json();
     queue = json.queue || [];
+    proposedQueue = json.proposedQueue || [];
+    currentUserId = json.current_user_id || 0;
+    
+    if (json.users) {
+      activeUsers = json.users.map((u: any) => ({
+        ID: u.ID || u.id || 0,
+        Username: u.Username || u.username || "",
+        CurrentRole: u.CurrentRole || u.current_role || "Guest",
+        AvatarUrl: u.AvatarUrl || u.avatar_url || ""
+      }));
+    }
   }
 }
 
@@ -42,6 +64,7 @@ let tabs: Array<Tab> = [
 let activeTabIdx = $state(0);
 
 onMount(() => {
+  fetchRoomData();
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const wsUrl = `${protocol}//${window.location.hostname}:8080/api/v1/room/${data.slug}/ws`;
 
@@ -58,6 +81,7 @@ onMount(() => {
           activeUsers = [
             ...activeUsers,
             {
+              ID: joinedUser.id || joinedUser.user_id || 0,
               Username: joinedUser.username,
               CurrentRole: joinedUser.role || "Guest",
               AvatarUrl: "",
@@ -71,14 +95,39 @@ onMount(() => {
           (u) => u.Username !== leftUser.username,
         );
         toasts.add(`${leftUser.username} left the room`, "left");
+      } else if (msg.type === "USER_ROLE_CHANGED") {
+        const { username, role } = msg.payload;
+        activeUsers = activeUsers.map((u) =>
+          u.Username === username ? { ...u, CurrentRole: role } : u,
+        );
+        toasts.add(`${username} is now ${role}`, "joined");
+      } else if (msg.type === "USER_KICKED") {
+        const { username } = msg.payload;
+        if (currentUser && currentUser.Username === username) {
+          toasts.add(`You were kicked from the room`, "left");
+          window.location.href = "/";
+        } else {
+          activeUsers = activeUsers.filter((u) => u.Username !== username);
+          toasts.add(`${username} was kicked`, "left");
+        }
       } else if (msg.type === "TRACK_ADDED") {
         const { title, artist } = msg.payload;
         toasts.add(`"${title}" by ${artist} was added to the queue`, "track");
-        fetchQueue();
+        fetchRoomData();
+      } else if (msg.type === "TRACK_PROPOSED") {
+        const { title, artist } = msg.payload;
+        toasts.add(`"${title}" by ${artist} was proposed`, "track");
+        fetchRoomData();
+      } else if (msg.type === "TRACK_APPROVED") {
+        toasts.add(`A proposed track was approved`, "track");
+        fetchRoomData();
+      } else if (msg.type === "TRACK_REJECTED") {
+        toasts.add(`A proposed track was rejected`, "track");
+        fetchRoomData();
       } else if (msg.type === "TRACK_SKIPPED") {
         const { title, artist } = msg.payload;
         toasts.add(`"${title}" by ${artist} was skipped`, "track");
-        fetchQueue();
+        fetchRoomData();
       }
     } catch (e) {
       console.error("Failed to parse WS message:", e);
@@ -103,7 +152,7 @@ onMount(() => {
           <ArrowLeft color="white" />
         </a>
       </div>
-      <h1 class="room_name onest-600">{data.room.Name}</h1>
+      <h1 class="room_name onest-600">{data?.room?.Name}</h1>
       <div class="room_actions">
         <button class="nav_button nav_invite" onclick={() => inviteDialog?.show()}>
           <Invite color="var(--auxie-deep-navy-900)" />
@@ -135,9 +184,9 @@ onMount(() => {
         
         <div class="tab-content">
           {#if activeTabIdx === 0}
-            <QueueTab queue={queue} slug={data.slug} />
+            <QueueTab queue={queue} proposedQueue={proposedQueue} currentUser={currentUser} slug={data.slug} />
           {:else if activeTabIdx === 1}
-            <UsersTab users={activeUsers} />
+            <UsersTab users={activeUsers} currentUser={currentUser} slug={data.slug} />
           {/if}
         </div>
       </div>

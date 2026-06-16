@@ -1,6 +1,7 @@
 import type { PageLoad } from "./$types";
 
 export type User = {
+  ID: number;
   Username: string;
   CurrentRole: string;
   AvatarUrl?: string;
@@ -23,8 +24,15 @@ export const load: PageLoad = async ({ params, fetch }) => {
     return {
       slug: params.slug,
       room: data.room as Room,
-      users: data.users as Array<User>,
-      queue: data.queue || []
+      users: (data.users || []).map((u: any) => ({
+        ID: u.ID || u.id || 0,
+        Username: u.Username || u.username || "",
+        CurrentRole: u.CurrentRole || u.current_role || "Guest",
+        AvatarUrl: u.AvatarUrl || u.avatar_url || ""
+      })) as User[],
+      queue: data.queue || [],
+      proposedQueue: data.proposedQueue || [],
+      currentUserId: data.current_user_id
     }
   } else {
     return { slug: params.slug }
