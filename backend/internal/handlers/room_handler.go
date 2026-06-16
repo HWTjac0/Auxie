@@ -391,6 +391,43 @@ func (h *RoomHandler) CheckIfHostHasRoom(host_id int) bool {
 	return false
 }
 
+func (h *RoomHandler) SkipTrack(c *gin.Context) {
+	slug := c.Param("slug")
+	room, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	queue, err := h.roomRepo.GetQueue(room.ID)
+	if err != nil || len(queue) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No track currently playing"})
+		return
+	}
+
+	trackToSkip := queue[0]
+
+	err = h.roomRepo.UpdateTrackStatus(trackToSkip.RoomTrackID, "skipped")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to skip track"})
+		return
+	}
+
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: slug,
+		Payload: gin.H{
+			"type": "TRACK_SKIPPED",
+			"payload": gin.H{
+				"track_id": trackToSkip.TrackID,
+				"title":    trackToSkip.Title,
+				"artist":   trackToSkip.Artist.String,
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Track skipped successfully"})
+}
+
 func (h *RoomHandler) AddTrackToRoom(room_id int, track_id int, user_id int) error {
 	return nil
 }

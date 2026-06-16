@@ -1,10 +1,30 @@
 <script lang="ts">
 import MusicalNote from "./icons/MusicalNote.svelte";
+import SkipForward from "./icons/SkipForward.svelte";
 
-let { queue = [] }: { queue?: any[] } = $props();
+let { queue = [], slug }: { queue?: any[], slug?: string } = $props();
 
 let currentlyPlaying = $derived(queue.length > 0 ? queue[0] : null);
 let upNext = $derived(queue.length > 1 ? queue.slice(1) : []);
+
+let isSkipping = $state(false);
+
+async function skipTrack() {
+    if (!slug || isSkipping) return;
+    isSkipping = true;
+    try {
+        const res = await fetch(`/api/v1/room/${slug}/skip`, {
+            method: 'POST'
+        });
+        if (!res.ok) {
+            console.error("Failed to skip track");
+        }
+    } catch(err) {
+        console.error(err);
+    } finally {
+        isSkipping = false;
+    }
+}
 </script>
 
 <div class="queue-tab">
@@ -30,12 +50,15 @@ let upNext = $derived(queue.length > 1 ? queue.slice(1) : []);
           <p class="onest-300">{currentlyPlaying.artist?.String || currentlyPlaying.artist || "Unknown Artist"}</p>
         </div>
         <div class="playing-actions">
-           <!-- Placeholder for future playback controls -->
            <div class="playing-indicator">
              <div class="bar"></div>
              <div class="bar"></div>
              <div class="bar"></div>
            </div>
+           
+           <button class="skip-btn" onclick={skipTrack} disabled={isSkipping} title="Skip Track">
+             <SkipForward size={24} color="var(--auxie-cloud-white-50)" />
+           </button>
         </div>
       </div>
     </div>
@@ -136,7 +159,31 @@ let upNext = $derived(queue.length > 1 ? queue.slice(1) : []);
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 15px;
     padding-right: 10px;
+  }
+
+  .skip-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .skip-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+
+  .skip-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   /* Equalizer Animation */

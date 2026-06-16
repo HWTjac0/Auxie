@@ -70,6 +70,7 @@ func SetupRouter(a *app.App) *gin.Engine {
 
 			protected.POST("/room/create", a.RoomHandler.CreateRoom)
 			protected.POST("/room/:slug/track", a.RoomHandler.AddTrack)
+			protected.POST("/room/:slug/skip", a.RoomHandler.SkipTrack)
 			protected.GET("/user/rooms", a.UserHandler.GetUserRooms)
 			protected.GET("/search", a.UserHandler.Search)
 			protected.GET("/room/:slug/ws", a.RoomHandler.HandleWS)

@@ -75,6 +75,10 @@ onMount(() => {
         const { title, artist } = msg.payload;
         toasts.add(`"${title}" by ${artist} was added to the queue`, "track");
         fetchQueue();
+      } else if (msg.type === "TRACK_SKIPPED") {
+        const { title, artist } = msg.payload;
+        toasts.add(`"${title}" by ${artist} was skipped`, "track");
+        fetchQueue();
       }
     } catch (e) {
       console.error("Failed to parse WS message:", e);
@@ -131,7 +135,7 @@ onMount(() => {
         
         <div class="tab-content">
           {#if activeTabIdx === 0}
-            <QueueTab queue={queue} />
+            <QueueTab queue={queue} slug={data.slug} />
           {:else if activeTabIdx === 1}
             <UsersTab users={activeUsers} />
           {/if}

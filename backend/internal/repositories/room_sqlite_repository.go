@@ -97,7 +97,7 @@ func (r *RoomSqliteRepo) GetQueue(roomID int) ([]models.RoomQueueItem, error) {
 			t.platform
 		FROM room_tracks rt
 		JOIN tracks t ON rt.track_id = t.id
-		WHERE rt.room_id = ?
+		WHERE rt.room_id = ? AND rt.status IN ('queued', 'playing')
 		ORDER BY rt.position ASC
 	`
 	
@@ -114,8 +114,8 @@ func (r *RoomSqliteRepo) GetQueue(roomID int) ([]models.RoomQueueItem, error) {
 }
 
 func (r *RoomSqliteRepo) UpdateTrackStatus(roomTrackID int, status string) error {
-	log.Println("TODO: implement RoomSqliteRepo.UpdateTrackStatus")
-	return nil
+	_, err := r.db.Exec(`UPDATE room_tracks SET status = ? WHERE id = ?`, status, roomTrackID)
+	return err
 }
 
 func (r *RoomSqliteRepo) RemoveFromQueue(roomTrackID int) error {
