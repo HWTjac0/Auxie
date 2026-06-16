@@ -115,7 +115,23 @@ import { fade, fly } from "svelte/transition";
   }
 
   .toast-item.error .toast-indicator {
-    background-color: var(--auxie-soft-crimson-500, #ef4444); /* Red */
+    background-color: var(--auxie-razzmatazz-500);
+    box-shadow: 0 0 10px rgba(239, 35, 107, 0.4);
+  }
+
+  .toast-item.joined .toast-indicator {
+    background-color: var(--auxie-intense-mint-500);
+    box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+  }
+
+  .toast-item.left .toast-indicator {
+    background-color: var(--auxie-razzmatazz-600);
+    box-shadow: 0 0 10px rgba(239, 35, 107, 0.4);
+  }
+
+  .toast-item.track .toast-indicator {
+    background-color: var(--auxie-electric-purple-500);
+    box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
   }
   .toast-item.error {
     border-left: 2px solid var(--auxie-soft-crimson-500, #ef4444);

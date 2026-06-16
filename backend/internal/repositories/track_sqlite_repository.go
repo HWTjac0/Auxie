@@ -20,13 +20,29 @@ func (r *TrackSqliteRepo) GetByID(id int) (*models.Track, error) {
 }
 
 func (r *TrackSqliteRepo) GetByURI(uri string) (*models.Track, error) {
-	log.Println("TODO: implement TrackSqliteRepo.GetByURI")
-	return nil, nil
+	query := `SELECT id, source_uri, artist, title, album, cover_url, platform FROM tracks WHERE source_uri = ?`
+	var track models.Track
+	err := r.db.Unsafe().Get(&track, query, uri)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &track, nil
 }
 
 func (r *TrackSqliteRepo) Create(track *models.Track) (int, error) {
-	log.Println("TODO: implement TrackSqliteRepo.Create")
-	return 0, nil
+	query := `INSERT INTO tracks (source_uri, artist, title, album, cover_url, platform) VALUES (?, ?, ?, ?, ?, ?)`
+	result, err := r.db.Exec(query, track.SourceURI, track.Artist, track.Title, track.Album, track.CoverURL, track.Platform)
+	if err != nil {
+		return 0, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return int(id), nil
 }
 
 func (r *TrackSqliteRepo) AddToRoom(roomTrack *models.RoomTrack) error {

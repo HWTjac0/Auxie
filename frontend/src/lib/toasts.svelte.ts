@@ -1,4 +1,4 @@
-export type ToastType = "info" | "success" | "warning" | "error";
+export type ToastType = "info" | "success" | "warning" | "error" | "joined" | "left" | "track";
 
 export interface Toast {
 	id: string;

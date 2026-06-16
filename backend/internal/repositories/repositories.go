@@ -38,7 +38,7 @@ type RoomRepository interface {
 	Delete(id int) error
 
 	AddToQueue(track *models.RoomTrack) error
-	GetQueue(roomID int) ([]models.RoomTrack, error)
+	GetQueue(roomID int) ([]models.RoomQueueItem, error)
 	UpdateTrackStatus(roomTrackID int, status string) error // np. 'playing', 'played'
 	RemoveFromQueue(roomTrackID int) error
 

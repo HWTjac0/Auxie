@@ -18,7 +18,7 @@ type App struct {
 	SpotifyHandler    *handlers.SpotifyHandler
 	TidalHandler      *handlers.TidalHandler
 	SoundCloudHandler *handlers.SoundCloudHandler
-	
+
 	SpotifyClient    *clients.SpotifyClient
 	TidalClient      *clients.TidalClient
 	SoundCloudClient *clients.SoundCloudClient
@@ -52,7 +52,7 @@ func NewApp(db *database.DB) *App {
 		RoomRepo:  roomRepo,
 
 		UserHandler:       handlers.NewUserHandler(userRepo, roomRepo, spotifyClient, tidalClient, soundCloudClient),
-		RoomHandler:       handlers.NewRoomHandler(roomRepo, userRepo),
+		RoomHandler:       handlers.NewRoomHandler(roomRepo, userRepo, trackRepo),
 		SpotifyHandler:    handlers.NewSpotifyHandler(userRepo, spotifyClient),
 		TidalHandler:      handlers.NewTidalHandler(userRepo, tidalClient),
 		SoundCloudHandler: handlers.NewSoundCloudHandler(userRepo),

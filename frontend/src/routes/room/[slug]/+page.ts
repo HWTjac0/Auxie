@@ -24,6 +24,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
       slug: params.slug,
       room: data.room as Room,
       users: data.users as Array<User>,
+      queue: data.queue || []
     }
   } else {
     return { slug: params.slug }

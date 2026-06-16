@@ -1,7 +1,7 @@
 <script lang="ts">
 import TextInput from "./TextInput.svelte";
 
-let { searchQuery = $bindable("") }: { searchQuery?: string } = $props();
+let { searchQuery = $bindable(""), slug }: { searchQuery?: string, slug: string } = $props();
 
 let dialogElement: HTMLDialogElement;
 let spotifyTracks = $state<any[]>([]);
@@ -14,6 +14,33 @@ export function show() {
 
 export function close() {
   dialogElement.close();
+}
+
+async function addTrack(track: any, platform: string) {
+  try {
+    const payload = {
+      source_uri: track.uri || track.url || track.id,
+      title: track.name || track.title,
+      artist: track.artists ? track.artists.map((a: any) => a.name).join(', ') : "",
+      album: track.album?.name || "",
+      cover_url: track.album?.images?.[0]?.url || "",
+      platform: platform,
+    };
+
+    const res = await fetch(`/api/v1/room/${slug}/track`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      close();
+    } else {
+      console.error("Failed to add track:", await res.text());
+    }
+  } catch (err) {
+    console.error("Error adding track:", err);
+  }
 }
 
 function formatDuration(ms: number): string {
@@ -150,7 +177,9 @@ $effect(() => {
                 <h3 class="service-title onest-600 spotify-color">Spotify</h3>
                 <div class="tracks-list">
                   {#each spotifyTracks as track (track.id)}
-                    <div class="track-item">
+                    <!-- svelte-ignore a11y_click_events_have_key_events -->
+                    <!-- svelte-ignore a11y_interactive_supports_focus -->
+                    <div class="track-item" onclick={() => addTrack(track, 'Spotify')} role="button">
                       {#if track.album?.images?.length > 0}
                         <img class="cover-art" src={track.album.images[track.album.images.length - 1].url} alt={track.album.name} />
                       {:else}
@@ -176,7 +205,9 @@ $effect(() => {
                 <h3 class="service-title onest-600 tidal-color">Tidal</h3>
                 <div class="tracks-list">
                   {#each tidalTracks as track (track.id)}
-                    <div class="track-item">
+                    <!-- svelte-ignore a11y_click_events_have_key_events -->
+                    <!-- svelte-ignore a11y_interactive_supports_focus -->
+                    <div class="track-item" onclick={() => addTrack(track, 'Tidal')} role="button">
                       {#if track.album?.images?.length > 0}
                         <img class="cover-art" src={track.album.images[track.album.images.length - 1].url} alt={track.album.name} />
                       {:else}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"auxie/backend/internal/models"
 	repositories "auxie/backend/internal/repositories"
+	"database/sql"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -15,18 +16,19 @@ import (
 )
 
 type RoomHandler struct {
-	roomRepo repositories.RoomRepository
-	userRepo repositories.UserRepository
-	hub      *RoomHub
+	roomRepo  repositories.RoomRepository
+	userRepo  repositories.UserRepository
+	trackRepo repositories.TrackRepository
+	hub       *RoomHub
 }
 
-func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.UserRepository) *RoomHandler {
+func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.UserRepository, trackRepo repositories.TrackRepository) *RoomHandler {
 	hub := NewRoomHub()
 
 	type dbEvent struct {
-		isJoin   bool
-		roomID   string
-		client   *WSClient
+		isJoin bool
+		roomID string
+		client *WSClient
 	}
 	dbQueue := make(chan dbEvent, 256)
 
@@ -84,10 +86,92 @@ func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.
 	}
 
 	return &RoomHandler{
-		roomRepo: roomRepo,
-		userRepo: userRepo,
-		hub:      hub,
+		roomRepo:  roomRepo,
+		userRepo:  userRepo,
+		trackRepo: trackRepo,
+		hub:       hub,
 	}
+}
+
+type AddTrackRequest struct {
+	SourceURI string `json:"source_uri" binding:"required"`
+	Title     string `json:"title" binding:"required"`
+	Artist    string `json:"artist"`
+	Album     string `json:"album"`
+	CoverURL  string `json:"cover_url"`
+	Platform  string `json:"platform"`
+}
+
+func (h *RoomHandler) AddTrack(c *gin.Context) {
+	slug := c.Param("slug")
+	userID := c.GetInt("user_id")
+
+	var req AddTrackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	room, err := h.roomRepo.GetBySlug(slug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	// 1. Get or create track
+	track, err := h.trackRepo.GetByURI(req.SourceURI)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error finding track"})
+		return
+	}
+
+	var trackID int
+	if track == nil {
+		newTrack := &models.Track{
+			SourceURI: req.SourceURI,
+			Title:     req.Title,
+			Platform:  sql.NullString{String: req.Platform, Valid: req.Platform != ""},
+			Artist:    sql.NullString{String: req.Artist, Valid: req.Artist != ""},
+			Album:     sql.NullString{String: req.Album, Valid: req.Album != ""},
+			CoverURL:  sql.NullString{String: req.CoverURL, Valid: req.CoverURL != ""},
+		}
+		trackID, err = h.trackRepo.Create(newTrack)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating track"})
+			return
+		}
+	} else {
+		trackID = track.ID
+	}
+
+	// 2. Add to queue
+	roomTrack := &models.RoomTrack{
+		RoomID:  room.ID,
+		TrackID: trackID,
+		AddedBy: userID,
+		Status:  models.TrackStatusQueued,
+	}
+
+	if err := h.roomRepo.AddToQueue(roomTrack); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error adding to queue"})
+		return
+	}
+
+	// 3. Broadcast to WS hub
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: slug,
+		Payload: gin.H{
+			"type": "TRACK_ADDED",
+			"payload": gin.H{
+				"track_id": trackID,
+				"title":    req.Title,
+				"artist":   req.Artist,
+				"added_by": userID,
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Track added to queue"})
 }
 
 func (h *RoomHandler) GetRandomRoomName(c *gin.Context) {
@@ -290,9 +374,16 @@ func (h *RoomHandler) GetRoomDetails(c *gin.Context) {
 		return
 	}
 
+	queue, err := h.roomRepo.GetQueue(room.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while getting queue"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"room":  room,
 		"users": users,
+		"queue": queue,
 	})
 }
 

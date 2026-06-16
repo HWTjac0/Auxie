@@ -71,7 +71,7 @@ func TokenRefreshMiddleware(
 						if refreshKey == "" {
 							refreshKey = user.SpotifyRefreshKey.String // Keep old refresh key if new one is not returned
 						}
-						
+
 						err = userRepo.UpdateSpotifyInfo(user.ID, user.SpotifyID.String, tokenResp.AccessToken, refreshKey, newExpiresAt)
 						if err != nil {
 							log.Println("Failed to save refreshed spotify token:", err)
@@ -97,7 +97,7 @@ func TokenRefreshMiddleware(
 						if refreshKey == "" {
 							refreshKey = user.SoundCloudRefreshKey.String
 						}
-						
+
 						err = userRepo.UpdateSoundCloudInfo(user.ID, user.SoundCloudID.String, tokenResp.AccessToken, refreshKey, newExpiresAt)
 						if err != nil {
 							log.Println("Failed to save refreshed soundcloud token:", err)
@@ -123,7 +123,7 @@ func TokenRefreshMiddleware(
 						if refreshKey == "" {
 							refreshKey = user.TidalRefreshKey.String
 						}
-						
+
 						err = userRepo.UpdateTidalInfo(user.ID, user.TidalID.String, tokenResp.AccessToken, refreshKey, newExpiresAt)
 						if err != nil {
 							log.Println("Failed to save refreshed tidal token:", err)

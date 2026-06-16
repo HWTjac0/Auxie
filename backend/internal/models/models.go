@@ -6,14 +6,14 @@ import (
 )
 
 type User struct {
-	ID                    int            `db:"id"`
-	Email                 sql.NullString `db:"email"`
-	Username              string         `db:"username"` // NOT NULL
-	Type                  UserType       `db:"type"`
-	SpotifyID             sql.NullString `db:"spotify_id"`
-	SpotifyAuthKey        sql.NullString `db:"spotify_auth_key"`
-	SpotifyRefreshKey     sql.NullString `db:"spotify_refresh_key"`
-	SpotifyTokenExpiresAt sql.NullTime   `db:"spotify_token_expires_at"`
+	ID                       int            `db:"id"`
+	Email                    sql.NullString `db:"email"`
+	Username                 string         `db:"username"` // NOT NULL
+	Type                     UserType       `db:"type"`
+	SpotifyID                sql.NullString `db:"spotify_id"`
+	SpotifyAuthKey           sql.NullString `db:"spotify_auth_key"`
+	SpotifyRefreshKey        sql.NullString `db:"spotify_refresh_key"`
+	SpotifyTokenExpiresAt    sql.NullTime   `db:"spotify_token_expires_at"`
 	SoundCloudID             sql.NullString `db:"soundcloud_id"`
 	SoundCloudKey            sql.NullString `db:"soundcloud_key"`
 	SoundCloudRefreshKey     sql.NullString `db:"soundcloud_refresh_key"`
@@ -22,10 +22,10 @@ type User struct {
 	TidalKey                 sql.NullString `db:"tidal_key"`
 	TidalRefreshKey          sql.NullString `db:"tidal_refresh_key"`
 	TidalTokenExpiresAt      sql.NullTime   `db:"tidal_token_expires_at"`
-	CurrentRoomID         sql.NullInt64  `db:"current_room_id"`
-	CurrentRole           *string        `db:"current_role"`
-	CreatedAt             time.Time      `db:"created_at"`
-	UpdatedAt             time.Time      `db:"updated_at"`
+	CurrentRoomID            sql.NullInt64  `db:"current_room_id"`
+	CurrentRole              *string        `db:"current_role"`
+	CreatedAt                time.Time      `db:"created_at"`
+	UpdatedAt                time.Time      `db:"updated_at"`
 }
 
 type Room struct {
@@ -59,6 +59,19 @@ type RoomTrack struct {
 	EndTimestamp   sql.NullTime `db:"end_timestamp"`
 	LikeCount      int          `db:"like_count"`
 	SkipCount      int          `db:"skip_count"`
+}
+
+type RoomQueueItem struct {
+	RoomTrackID int            `db:"room_track_id" json:"room_track_id"`
+	Position    int            `db:"position" json:"position"`
+	Status      TrackStatus    `db:"status" json:"status"`
+	AddedBy     int            `db:"added_by" json:"added_by"`
+	LikeCount   int            `db:"like_count" json:"like_count"`
+	TrackID     int            `db:"track_id" json:"track_id"`
+	Title       string         `db:"title" json:"title"`
+	Artist      sql.NullString `db:"artist" json:"artist"`
+	CoverURL    sql.NullString `db:"cover_url" json:"cover_url"`
+	Platform    sql.NullString `db:"platform" json:"platform"`
 }
 
 type Archival struct {

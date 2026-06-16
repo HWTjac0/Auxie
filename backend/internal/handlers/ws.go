@@ -65,7 +65,7 @@ func (h *RoomHub) run() {
 				clients = make(map[*WSClient]bool)
 				h.rooms[sub.RoomID] = clients
 			}
-			
+
 			userConnectionCount := 0
 			for client := range clients {
 				if client.UserID == sub.Client.UserID {

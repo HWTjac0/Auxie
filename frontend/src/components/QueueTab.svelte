@@ -1,7 +1,10 @@
 <script lang="ts">
 import MusicalNote from "./icons/MusicalNote.svelte";
 
-// Tutaj w przyszłości można przekazać listę utworów w kolejce
+let { queue = [] }: { queue?: any[] } = $props();
+
+let currentlyPlaying = $derived(queue.length > 0 ? queue[0] : null);
+let upNext = $derived(queue.length > 1 ? queue.slice(1) : []);
 </script>
 
 <div class="queue-tab">
@@ -9,13 +12,51 @@ import MusicalNote from "./icons/MusicalNote.svelte";
     <h2 class="onest-500">Queue</h2>
   </div>
   
-  <div class="empty-state">
-    <div class="empty-icon">
-    <MusicalNote size={40}/>
+  {#if queue.length === 0}
+    <div class="empty-state">
+      <div class="empty-icon">
+        <MusicalNote size={40}/>
+      </div>
+      <h3 class="onest-500">Queue is empty</h3>
+      <p class="onest-300">Search for desired track to be played below and add it to the queue!</p>
     </div>
-    <h3 class="onest-500">Queue is empty</h3>
-    <p class="onest-300">Search for desired track to be played below and add it to the queue!</p>
-  </div>
+  {:else}
+    <div class="currently-playing">
+      <h3 class="section-title onest-500">Currently Playing</h3>
+      <div class="playing-card">
+        <img src={currentlyPlaying.cover_url?.String || currentlyPlaying.cover_url || "/placeholder.png"} alt={currentlyPlaying.title} class="playing-cover" />
+        <div class="playing-info">
+          <h4 class="onest-600">{currentlyPlaying.title}</h4>
+          <p class="onest-300">{currentlyPlaying.artist?.String || currentlyPlaying.artist || "Unknown Artist"}</p>
+        </div>
+        <div class="playing-actions">
+           <!-- Placeholder for future playback controls -->
+           <div class="playing-indicator">
+             <div class="bar"></div>
+             <div class="bar"></div>
+             <div class="bar"></div>
+           </div>
+        </div>
+      </div>
+    </div>
+
+    {#if upNext.length > 0}
+      <div class="up-next">
+        <h3 class="section-title onest-500">Up Next</h3>
+        <div class="next-list">
+          {#each upNext as track (track.room_track_id)}
+            <div class="next-item">
+              <img src={track.cover_url?.String || track.cover_url || "/placeholder.png"} alt={track.title} class="next-cover" />
+              <div class="next-info">
+                <h4 class="onest-500">{track.title}</h4>
+                <p class="onest-300">{track.artist?.String || track.artist || "Unknown Artist"}</p>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+  {/if}
 </div>
 
 <style>
@@ -39,6 +80,142 @@ import MusicalNote from "./icons/MusicalNote.svelte";
     margin: 0;
   }
 
+  .section-title {
+    font-size: 14px;
+    color: var(--auxie-cloud-white-400);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    padding-left: 5px;
+  }
+
+  /* Currently Playing */
+  .currently-playing {
+    margin-bottom: 10px;
+  }
+
+  .playing-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(0, 255, 135, 0.15));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 15px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  .playing-cover {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .playing-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .playing-info h4 {
+    margin: 0;
+    color: var(--auxie-cloud-white-50);
+    font-size: 16px;
+  }
+
+  .playing-info p {
+    margin: 0;
+    color: var(--auxie-cloud-white-400);
+    font-size: 14px;
+  }
+
+  .playing-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-right: 10px;
+  }
+
+  /* Equalizer Animation */
+  .playing-indicator {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 20px;
+  }
+
+  .playing-indicator .bar {
+    width: 4px;
+    background-color: var(--auxie-intense-mint-500);
+    border-radius: 2px;
+    animation: equalize 1s infinite alternate;
+  }
+
+  .playing-indicator .bar:nth-child(1) { height: 10px; animation-delay: -0.2s; }
+  .playing-indicator .bar:nth-child(2) { height: 20px; animation-delay: -0.4s; }
+  .playing-indicator .bar:nth-child(3) { height: 15px; animation-delay: -0.6s; }
+
+  @keyframes equalize {
+    0% { height: 4px; }
+    100% { height: 20px; }
+  }
+
+  /* Up Next */
+  .up-next {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .next-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .next-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 10px;
+    transition: background-color 0.2s;
+  }
+
+  .next-item:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .next-cover {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  .next-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .next-info h4 {
+    margin: 0;
+    color: var(--auxie-cloud-white-100);
+    font-size: 15px;
+  }
+
+  .next-info p {
+    margin: 0;
+    color: var(--auxie-cloud-white-500);
+    font-size: 13px;
+  }
+
+  /* Empty State */
   .empty-state {
     display: flex;
     flex-direction: column;

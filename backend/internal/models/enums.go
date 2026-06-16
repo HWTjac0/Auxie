@@ -44,9 +44,14 @@ func (s TrackStatus) String() string {
 }
 
 func (s *TrackStatus) Scan(value any) error {
-	strVal, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("TrackStatus must be a string")
+	var strVal string
+	switch v := value.(type) {
+	case string:
+		strVal = v
+	case []byte:
+		strVal = string(v)
+	default:
+		return fmt.Errorf("TrackStatus must be a string or []byte")
 	}
 
 	switch strVal {
@@ -64,7 +69,7 @@ func (s *TrackStatus) Scan(value any) error {
 	return nil
 }
 
-func (s TrackStatus) Value() (any, error) {
+func (s TrackStatus) Value() (driver.Value, error) {
 	return s.String(), nil
 }
 
@@ -99,9 +104,14 @@ func (r UserRole) Value() (driver.Value, error) {
 }
 
 func (r *UserRole) Scan(value any) error {
-	s, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("UserRole must be a string")
+	var s string
+	switch v := value.(type) {
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	default:
+		return fmt.Errorf("UserRole must be a string or []byte")
 	}
 	switch s {
 	case "Guest":
@@ -136,9 +146,14 @@ func (t UserType) Value() (driver.Value, error) {
 }
 
 func (t *UserType) Scan(value any) error {
-	s, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("UserType must be a string")
+	var s string
+	switch v := value.(type) {
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	default:
+		return fmt.Errorf("UserType must be a string or []byte")
 	}
 	switch s {
 	case "Registered":

@@ -75,13 +75,42 @@ func (r *RoomSqliteRepo) Delete(id int) error {
 }
 
 func (r *RoomSqliteRepo) AddToQueue(track *models.RoomTrack) error {
-	log.Println("TODO: implement RoomSqliteRepo.AddToQueue")
-	return nil
+	query := `INSERT INTO room_tracks (room_id, track_id, added_by, position, status) 
+	          VALUES (?, ?, ?, COALESCE((SELECT MAX(position) FROM room_tracks WHERE room_id = ?), 0) + 1, ?)`
+
+	_, err := r.db.Exec(query, track.RoomID, track.TrackID, track.AddedBy, track.RoomID, track.Status)
+	return err
 }
 
-func (r *RoomSqliteRepo) GetQueue(roomID int) ([]models.RoomTrack, error) {
-	log.Println("TODO: implement RoomSqliteRepo.GetQueue")
-	return nil, nil
+func (r *RoomSqliteRepo) GetQueue(roomID int) ([]models.RoomQueueItem, error) {
+	query := `
+		SELECT 
+			rt.id AS room_track_id, 
+			rt.position, 
+			rt.status, 
+			rt.added_by, 
+			rt.like_count, 
+			t.id AS track_id, 
+			t.title, 
+			t.artist, 
+			t.cover_url, 
+			t.platform
+		FROM room_tracks rt
+		JOIN tracks t ON rt.track_id = t.id
+		WHERE rt.room_id = ?
+		ORDER BY rt.position ASC
+	`
+	
+	var queue []models.RoomQueueItem
+	err := r.db.Select(&queue, query, roomID)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return []models.RoomQueueItem{}, nil
+		}
+		return nil, err
+	}
+	
+	return queue, nil
 }
 
 func (r *RoomSqliteRepo) UpdateTrackStatus(roomTrackID int, status string) error {

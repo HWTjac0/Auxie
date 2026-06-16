@@ -21,6 +21,15 @@ let inviteDialog: any = $state(null);
 let searchDialog: any = $state(null);
 let searchQuery: string = $state("");
 let activeUsers = $state<any[]>(data.users || []);
+let queue = $state<any[]>(data.queue || []);
+
+async function fetchQueue() {
+  const res = await fetch(`/api/v1/room/${data.slug}`);
+  if (res.ok) {
+    const json = await res.json();
+    queue = json.queue || [];
+  }
+}
 
 type Tab = {
   label: string;
@@ -54,17 +63,18 @@ onMount(() => {
               AvatarUrl: "",
             },
           ];
-          toasts.success(`${joinedUser.username} joined the room`);
         }
+        toasts.add(`${joinedUser.username} joined the room`, "joined");
       } else if (msg.type === "USER_LEFT") {
         const leftUser = msg.payload;
         activeUsers = activeUsers.filter(
           (u) => u.Username !== leftUser.username,
         );
-        toasts.warning(`${leftUser.username} left the room`);
+        toasts.add(`${leftUser.username} left the room`, "left");
       } else if (msg.type === "TRACK_ADDED") {
-        const track = msg.payload;
-        toasts.success(`New song added: ${track.title || "Unknown Title"}`);
+        const { title, artist } = msg.payload;
+        toasts.add(`"${title}" by ${artist} was added to the queue`, "track");
+        fetchQueue();
       }
     } catch (e) {
       console.error("Failed to parse WS message:", e);
@@ -82,21 +92,19 @@ onMount(() => {
   <div class="background_gradient background_gradient_bottom"></div>
 
   <div class="content_wrapper">
-    <nav>
+  <nav>
     <div class="nav_container">
-      <a href="/" class="back-link">
-        <ArrowLeft color="white" />
-      </a>
-      <h1 class="room_name">
-      {data?.room?.Name ?? "Name"}
-      </h1>
+      <div class="back-link">
+        <a href="/">
+          <ArrowLeft color="white" />
+        </a>
+      </div>
+      <h1 class="room_name onest-600">{data.room.Name}</h1>
       <div class="room_actions">
-        <button
-          class="nav_button nav_invite"
-          onclick={() => inviteDialog?.show()}
-        >
-          <Invite color="white" />
+        <button class="nav_button nav_invite" onclick={() => inviteDialog?.show()}>
+          <Invite color="var(--auxie-deep-navy-900)" />
         </button>
+
         <button class="nav_button nav_actions" id="nav_actions" popovertarget="actions_popover">
           <EllipsisVert color="white" />
         </button>
@@ -123,7 +131,7 @@ onMount(() => {
         
         <div class="tab-content">
           {#if activeTabIdx === 0}
-            <QueueTab />
+            <QueueTab queue={queue} />
           {:else if activeTabIdx === 1}
             <UsersTab users={activeUsers} />
           {/if}
@@ -132,7 +140,7 @@ onMount(() => {
     </div>
   </main>
   <InviteDialog bind:this={inviteDialog} slug={data.slug} />
-  <SearchDialog bind:this={searchDialog} bind:searchQuery={searchQuery} />
+  <SearchDialog bind:this={searchDialog} bind:searchQuery={searchQuery} slug={data.slug} />
   
     <button class="fab-add-song onest-500" onclick={() => searchDialog?.show()}>
       <Plus/> Add Song

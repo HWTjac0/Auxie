@@ -58,7 +58,7 @@ func SetupRouter(a *app.App) *gin.Engine {
 			user := v1.Group("/user")
 			user.GET("/random_name", a.UserHandler.GetRandomUserName)
 			user.GET("/logout", a.UserHandler.Logout)
-			
+
 			protected := v1.Group("/")
 			protected.Use(handlers.SessionAuthMiddleware())
 			protected.Use(handlers.TokenRefreshMiddleware(
@@ -67,8 +67,9 @@ func SetupRouter(a *app.App) *gin.Engine {
 				a.TidalClient,
 				a.SoundCloudClient,
 			))
-			
+
 			protected.POST("/room/create", a.RoomHandler.CreateRoom)
+			protected.POST("/room/:slug/track", a.RoomHandler.AddTrack)
 			protected.GET("/user/rooms", a.UserHandler.GetUserRooms)
 			protected.GET("/search", a.UserHandler.Search)
 			protected.GET("/room/:slug/ws", a.RoomHandler.HandleWS)
@@ -77,4 +78,3 @@ func SetupRouter(a *app.App) *gin.Engine {
 
 	return r
 }
-
