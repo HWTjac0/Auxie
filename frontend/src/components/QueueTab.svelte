@@ -35,12 +35,11 @@ async function likeTrack(roomTrackId: number) {
             const newSet = new Set(likedTracks);
             if (data.liked) {
                 newSet.add(roomTrackId);
-                likeCounts = { ...likeCounts, [roomTrackId]: (likeCounts[roomTrackId] ?? 0) + 1 };
             } else {
                 newSet.delete(roomTrackId);
-                likeCounts = { ...likeCounts, [roomTrackId]: Math.max(0, (likeCounts[roomTrackId] ?? 1) - 1) };
             }
             likedTracks = newSet;
+            likeCounts = { ...likeCounts, [roomTrackId]: data.like_count };
         }
     } catch(err) {
         console.error(err);

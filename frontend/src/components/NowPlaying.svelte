@@ -50,6 +50,8 @@ let skipVoteCount = $state(0);
 let skipVoteThreshold = $state(0);
 let hasVotedSkip = $state(false);
 let isVotingSkip = $state(false);
+let lastTrackId = $state<number | null>(null);
+let lastStartedTrackId = $state<number | null>(null);
 
 // Sync likeCounts from playback track
 $effect(() => {
@@ -63,7 +65,7 @@ $effect(() => {
 $effect(() => {
 	const playingTrack = queue.length > 0 && queue[0].status === "playing" ? queue[0] : null;
 	if (playingTrack) {
-		if (!playback.track || playback.track.room_track_id !== playingTrack.room_track_id) {
+		if (playback.track !== playingTrack) {
 			playback.track = playingTrack;
 			playback.status = "playing";
 		}
@@ -78,10 +80,34 @@ $effect(() => {
 // Reset skip vote state when track changes
 $effect(() => {
 	const id = playback.track?.room_track_id;
-	if (id) {
+	if (id && id !== lastTrackId) {
+		lastTrackId = id;
 		skipVoteCount = 0;
 		skipVoteThreshold = 0;
 		hasVotedSkip = false;
+	} else if (!id) {
+		lastTrackId = null;
+	}
+});
+
+// Auto-play currently playing track when Spotify SDK player is ready
+$effect(() => {
+	const track = playback.track;
+	if (!track) {
+		lastStartedTrackId = null;
+		return;
+	}
+	if (
+		playback.status === "playing" &&
+		track.platform === "Spotify" &&
+		spotifyPlayer &&
+		spotifyDeviceID &&
+		spotifyToken &&
+		lastStartedTrackId !== track.room_track_id
+	) {
+		lastStartedTrackId = track.room_track_id;
+		console.log("🚀 [AutoPlay Effect] Spotify player ready, starting track:", track.title);
+		startPlayingTrack(track);
 	}
 });
 
@@ -111,12 +137,11 @@ async function likeTrack(roomTrackId: number) {
 			const newSet = new Set(likedTracks);
 			if (data.liked) {
 				newSet.add(roomTrackId);
-				likeCounts = { ...likeCounts, [roomTrackId]: (likeCounts[roomTrackId] ?? 0) + 1 };
 			} else {
 				newSet.delete(roomTrackId);
-				likeCounts = { ...likeCounts, [roomTrackId]: Math.max(0, (likeCounts[roomTrackId] ?? 1) - 1) };
 			}
 			likedTracks = newSet;
+			likeCounts = { ...likeCounts, [roomTrackId]: data.like_count };
 		}
 	} catch(err) {
 		console.error(err);
@@ -253,63 +278,7 @@ async function initSpotifyPlayer() {
 	}
 }
 
-// Listen to WS events
-function setupWSListener() {
-	if (!ws) return;
-
-	const originalOnMessage = ws.onmessage;
-
-	ws.onmessage = (event) => {
-		try {
-			const msg = JSON.parse(event.data);
-
-			if (msg.type === "playback:start") {
-				playback.track = msg.track;
-				playback.status = "playing";
-				playback.startedAt = msg.started_at;
-				// Reset skip vote status
-				skipVoteCount = 0;
-				skipVoteThreshold = 0;
-				hasVotedSkip = false;
-
-				console.log("🎵 Playback started:", msg.track.title, "Platform:", msg.track.platform);
-				startPlayingTrack(msg.track);
-			} else if (msg.type === "playback:skipped") {
-				stopPlayback();
-				playback.track = null;
-				playback.status = "idle";
-				console.log("⏭️  Track skipped");
-			} else if (msg.type === "playback:ended") {
-				stopPlayback();
-				playback.track = null;
-				playback.status = "idle";
-				console.log("✅ Track ended");
-			} else if (msg.type === "TRACK_LIKED") {
-				const { room_track_id, liked } = msg.payload;
-				const newSet = new Set(likedTracks);
-				if (liked) {
-					likeCounts = { ...likeCounts, [room_track_id]: (likeCounts[room_track_id] ?? 0) + 1 };
-				} else {
-					likeCounts = { ...likeCounts, [room_track_id]: Math.max(0, (likeCounts[room_track_id] ?? 1) - 1) };
-				}
-				likedTracks = newSet;
-			} else if (msg.type === "SKIP_VOTE") {
-				const { room_track_id, votes, threshold } = msg.payload;
-				if (playback.track?.room_track_id === room_track_id) {
-					skipVoteCount = votes;
-					skipVoteThreshold = threshold;
-				}
-			}
-		} catch (err) {
-			console.error("Error parsing WS message:", err);
-		}
-
-		// Call original handler if exists
-		if (originalOnMessage) {
-			originalOnMessage.call(ws, event);
-		}
-	};
-}
+// WebSocket event listening is now handled reactively at the bottom of the script.
 
 async function startPlayingTrack(track: any) {
 	if (!track) return;
@@ -510,7 +479,50 @@ onMount(async () => {
 // Reactive trigger - set listener when ws changes
 $effect(() => {
 	if (ws) {
-		setupWSListener();
+		const listener = (event: MessageEvent) => {
+			try {
+				const msg = JSON.parse(event.data);
+
+				if (msg.type === "playback:start") {
+					playback.track = msg.track;
+					playback.status = "playing";
+					playback.startedAt = msg.started_at;
+					// Reset skip vote status
+					skipVoteCount = 0;
+					skipVoteThreshold = 0;
+					hasVotedSkip = false;
+
+					console.log("🎵 Playback started:", msg.track.title, "Platform:", msg.track.platform);
+					// Relying on the autoplay effect to trigger startPlayingTrack
+				} else if (msg.type === "playback:skipped") {
+					stopPlayback();
+					playback.track = null;
+					playback.status = "idle";
+					console.log("⏭️  Track skipped");
+				} else if (msg.type === "playback:ended") {
+					stopPlayback();
+					playback.track = null;
+					playback.status = "idle";
+					console.log("✅ Track ended");
+				} else if (msg.type === "TRACK_LIKED") {
+					const { room_track_id, like_count } = msg.payload;
+					likeCounts = { ...likeCounts, [room_track_id]: like_count };
+				} else if (msg.type === "SKIP_VOTE") {
+					const { room_track_id, votes, threshold } = msg.payload;
+					if (playback.track?.room_track_id === room_track_id) {
+						skipVoteCount = votes;
+						skipVoteThreshold = threshold;
+					}
+				}
+			} catch (err) {
+				console.error("Error parsing WS message:", err);
+			}
+		};
+
+		ws.addEventListener("message", listener);
+		return () => {
+			ws.removeEventListener("message", listener);
+		};
 	}
 });
 

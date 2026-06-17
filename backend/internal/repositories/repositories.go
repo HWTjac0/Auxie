@@ -51,6 +51,7 @@ type RoomRepository interface {
 
 	IncrementLikeCount(roomTrackID int) error
 	DecrementLikeCount(roomTrackID int) error
+	GetLikeCount(roomTrackID int) (int, error)
 	IncrementSkipCount(roomTrackID int) error
 	GetSkipCount(roomTrackID int) (int, error)
 

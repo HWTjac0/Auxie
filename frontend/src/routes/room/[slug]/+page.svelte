@@ -73,7 +73,7 @@ onMount(() => {
   const socket = new WebSocket(wsUrl);
   ws = socket;
 
-  socket.onmessage = (event) => {
+  const messageListener = (event: MessageEvent) => {
     try {
       const msg = JSON.parse(event.data);
       console.log("WS message:", msg);
@@ -134,13 +134,20 @@ onMount(() => {
       } else if (msg.type === "playback:start") {
         // Mark first queue item as playing (refresh queue)
         fetchRoomData();
+      } else if (msg.type === "TRACK_LIKED") {
+        const { room_track_id, like_count } = msg.payload;
+        queue = queue.map((t) => t.room_track_id === room_track_id ? { ...t, like_count } : t);
+        proposedQueue = proposedQueue.map((t) => t.room_track_id === room_track_id ? { ...t, like_count } : t);
       }
     } catch (e) {
       console.error("Failed to parse WS message:", e);
     }
   };
 
+  socket.addEventListener("message", messageListener);
+
   return () => {
+    socket.removeEventListener("message", messageListener);
     socket.close();
   };
 });

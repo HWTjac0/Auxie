@@ -543,11 +543,16 @@ func (h *RoomHandler) LikeTrack(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrement like"})
 			return
 		}
+		likeCount, err := h.roomRepo.GetLikeCount(roomTrackID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get like count"})
+			return
+		}
 		h.hub.broadcast <- &BroadcastMessage{
 			RoomID:  slug,
-			Payload: gin.H{"type": "TRACK_LIKED", "payload": gin.H{"room_track_id": roomTrackID, "liked": false}},
+			Payload: gin.H{"type": "TRACK_LIKED", "payload": gin.H{"room_track_id": roomTrackID, "liked": false, "like_count": likeCount}},
 		}
-		c.JSON(http.StatusOK, gin.H{"liked": false})
+		c.JSON(http.StatusOK, gin.H{"liked": false, "like_count": likeCount})
 		return
 	}
 
@@ -559,12 +564,17 @@ func (h *RoomHandler) LikeTrack(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to increment like"})
 		return
 	}
+	likeCount, err := h.roomRepo.GetLikeCount(roomTrackID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get like count"})
+		return
+	}
 
 	h.hub.broadcast <- &BroadcastMessage{
 		RoomID:  slug,
-		Payload: gin.H{"type": "TRACK_LIKED", "payload": gin.H{"room_track_id": roomTrackID, "liked": true}},
+		Payload: gin.H{"type": "TRACK_LIKED", "payload": gin.H{"room_track_id": roomTrackID, "liked": true, "like_count": likeCount}},
 	}
-	c.JSON(http.StatusOK, gin.H{"liked": true})
+	c.JSON(http.StatusOK, gin.H{"liked": true, "like_count": likeCount})
 }
 
 func (h *RoomHandler) VoteSkip(c *gin.Context) {

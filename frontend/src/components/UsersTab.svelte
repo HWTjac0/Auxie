@@ -8,7 +8,6 @@ let {
   slug,
 }: { users: User[]; currentUser?: any; slug?: string } = $props();
 
-console.log(currentUser);
 let isHost = $derived(currentUser?.CurrentRole === "Host");
 
 async function changeRole(username: string, newRole: string) {
@@ -54,7 +53,6 @@ async function kickUser(username: string) {
           <span class="role onest-300">{user.CurrentRole}</span>
         </div>
         
-        {#if user.Username !== currentUser?.Username}
           <div class="user-actions">
             <select 
               class="role-select" 
@@ -70,7 +68,6 @@ async function kickUser(username: string) {
               <button class="kick-btn" onclick={() => kickUser(user.Username)} title="Kick User">✕</button>
             {/if}
           </div>
-        {/if}
       </li>
     {:else}
       <li class="empty-state onest-500">There are no users yet</li>

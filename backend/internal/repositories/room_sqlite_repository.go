@@ -172,6 +172,12 @@ func (r *RoomSqliteRepo) DecrementLikeCount(roomTrackID int) error {
 	return err
 }
 
+func (r *RoomSqliteRepo) GetLikeCount(roomTrackID int) (int, error) {
+	var count int
+	err := r.db.Get(&count, `SELECT like_count FROM room_tracks WHERE id = ?`, roomTrackID)
+	return count, err
+}
+
 func (r *RoomSqliteRepo) IncrementSkipCount(roomTrackID int) error {
 	_, err := r.db.Exec(`UPDATE room_tracks SET skip_count = skip_count + 1 WHERE id = ?`, roomTrackID)
 	return err
