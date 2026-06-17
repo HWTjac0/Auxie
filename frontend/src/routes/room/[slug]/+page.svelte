@@ -1,4 +1,6 @@
 <script lang="ts">
+import LeaveDialog from "../../../components/LeaveDialog.svelte";
+import SummaryDialog from "../../../components/SummaryDialog.svelte";
 import ArrowLeft from "../../../components/icons/ArrowLeft.svelte";
 import EllipsisVert from "../../../components/icons/EllipsisVert.svelte";
 import Invite from "../../../components/icons/Invite.svelte";
@@ -20,7 +22,12 @@ let { data }: PageProps = $props();
 
 let inviteDialog: any = $state(null);
 let searchDialog: any = $state(null);
+// ref to QueueTab to forward WS messages (likes, skip votes)
+let queueTabRef: any = $state(null);
 let searchQuery: string = $state("");
+let leaveDialog: any = $state(null);
+let summaryDialog: any = $state(null);
+let roomHistory = $state<any[]>([]);
 let activeUsers = $state<any[]>(data.users || []);
 let queue = $state<any[]>(data.queue || []);
 let proposedQueue = $state<any[]>(data.proposedQueue || []);
@@ -29,12 +36,7 @@ let currentUserId = $state(data.currentUserId || 0);
 let ws = $state<WebSocket | null>(null);
 
 let currentUser = $derived(activeUsers.find(u => u.ID === currentUserId || u.id === currentUserId));
-
-$effect(() => {
-  console.log("DEBUG: currentUserId =", currentUserId);
-  console.log("DEBUG: activeUsers =", $state.snapshot(activeUsers));
-  console.log("DEBUG: currentUser =", currentUser);
-});
+let isHost = $derived(currentUser?.CurrentRole === "Host");
 
 async function fetchRoomData() {
   const res = await fetch(`/api/v1/room/${data.slug}`);
@@ -43,7 +45,6 @@ async function fetchRoomData() {
     queue = json.queue || [];
     proposedQueue = json.proposedQueue || [];
     currentUserId = json.current_user_id || 0;
-    
     if (json.users) {
       activeUsers = json.users.map((u: any) => ({
         ID: u.ID || u.id || 0,
@@ -55,54 +56,75 @@ async function fetchRoomData() {
   }
 }
 
-type Tab = {
-  label: string;
-  icon: Component<any>;
-};
+type Tab = { label: string; icon: Component<any> };
 let tabs: Array<Tab> = [
   { label: "Queue", icon: List },
   { label: "Users", icon: Users },
 ];
 let activeTabIdx = $state(0);
 
+function initiateLeave() {
+  leaveDialog?.show();
+}
+
+async function loadHistoryAndShowSummary() {
+  try {
+    const res = await fetch(`/api/v1/room/${data.slug}/history`);
+    
+    if (res.ok) { 
+      roomHistory = await res.json(); 
+    } else {
+      console.error("Something went wrong. :< ");
+    }
+    summaryDialog?.show();
+  } catch(e) {
+    console.error("History fetch error:", e);
+  }
+}
+
+async function confirmLeaveRoom() {
+  if (isHost) {
+    const res = await fetch(`/api/v1/room/${data.slug}`, { method: 'DELETE' });
+    if (res.ok) {
+      toasts.add("Zamknąłeś pokój.", "info");
+    } else {
+      toasts.add("Nie udało się usunąć pokoju.", "error");
+    }
+  } else {
+    // GOŚĆ: Wychodzi i jako jedyny ręcznie pobiera swoją historię.
+    await fetch(`/api/v1/room/${data.slug}/leave`, { method: 'POST' });
+    await loadHistoryAndShowSummary();
+  }
+}
+
 onMount(() => {
   fetchRoomData();
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const wsUrl = `${protocol}//${window.location.hostname}:8080/api/v1/room/${data.slug}/ws`;
-
   const socket = new WebSocket(wsUrl);
   ws = socket;
 
-  const messageListener = (event: MessageEvent) => {
+  socket.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
-      console.log("WS message:", msg);
 
       if (msg.type === "USER_JOINED") {
         const joinedUser = msg.payload;
         if (!activeUsers.some((u) => u.Username === joinedUser.username)) {
-          activeUsers = [
-            ...activeUsers,
-            {
-              ID: joinedUser.id || joinedUser.user_id || 0,
-              Username: joinedUser.username,
-              CurrentRole: joinedUser.role || "Guest",
-              AvatarUrl: "",
-            },
-          ];
+          activeUsers = [...activeUsers, {
+            ID: joinedUser.id || joinedUser.user_id || 0,
+            Username: joinedUser.username,
+            CurrentRole: joinedUser.role || "Guest",
+            AvatarUrl: "",
+          }];
         }
         toasts.add(`${joinedUser.username} joined the room`, "joined");
       } else if (msg.type === "USER_LEFT") {
-        const leftUser = msg.payload;
-        activeUsers = activeUsers.filter(
-          (u) => u.Username !== leftUser.username,
-        );
-        toasts.add(`${leftUser.username} left the room`, "left");
+        activeUsers = activeUsers.filter((u) => u.Username !== msg.payload.username);
+        toasts.add(`${msg.payload.username} left the room`, "left");
       } else if (msg.type === "USER_ROLE_CHANGED") {
         const { username, role } = msg.payload;
-        activeUsers = activeUsers.map((u) =>
-          u.Username === username ? { ...u, CurrentRole: role } : u,
-        );
+        activeUsers = activeUsers.map((u) => u.Username === username ? { ...u, CurrentRole: role } : u);
         toasts.add(`${username} is now ${role}`, "joined");
       } else if (msg.type === "USER_KICKED") {
         const { username } = msg.payload;
@@ -114,12 +136,10 @@ onMount(() => {
           toasts.add(`${username} was kicked`, "left");
         }
       } else if (msg.type === "TRACK_ADDED") {
-        const { title, artist } = msg.payload;
-        toasts.add(`"${title}" by ${artist} was added to the queue`, "track");
+        toasts.add(`"${msg.payload.title}" by ${msg.payload.artist} was added to the queue`, "track");
         fetchRoomData();
       } else if (msg.type === "TRACK_PROPOSED") {
-        const { title, artist } = msg.payload;
-        toasts.add(`"${title}" by ${artist} was proposed`, "track");
+        toasts.add(`"${msg.payload.title}" by ${msg.payload.artist} was proposed`, "track");
         fetchRoomData();
       } else if (msg.type === "TRACK_APPROVED") {
         toasts.add(`A proposed track was approved`, "track");
@@ -128,98 +148,110 @@ onMount(() => {
         toasts.add(`A proposed track was rejected`, "track");
         fetchRoomData();
       } else if (msg.type === "TRACK_SKIPPED") {
-        const { title, artist } = msg.payload;
-        toasts.add(`"${title}" by ${artist} was skipped`, "track");
+        const p = msg.payload;
+        if (p?.by_vote) {
+          toasts.add(`"${p.title}" was skipped by vote`, "track");
+        } else if (p?.title) {
+          toasts.add(`"${p.title}" by ${p.artist} was skipped`, "track");
+        }
         fetchRoomData();
       } else if (msg.type === "playback:start") {
-        // Mark first queue item as playing (refresh queue)
         fetchRoomData();
-      } else if (msg.type === "TRACK_LIKED") {
-        const { room_track_id, like_count } = msg.payload;
-        queue = queue.map((t) => t.room_track_id === room_track_id ? { ...t, like_count } : t);
-        proposedQueue = proposedQueue.map((t) => t.room_track_id === room_track_id ? { ...t, like_count } : t);
+      } else if (msg.type === "playback:queue_empty") {
+        queue = [];
+        toasts.add("Queue is now empty", "track");
+      } else if (msg.type === "TRACK_LIKED" || msg.type === "SKIP_VOTE") {
+        // Forward to QueueTab for optimistic counter updates
+        queueTabRef?.onWsMessage(msg);
+      }else if (msg.type === "ROOM_CLOSED") {
+        toasts.add("Host has ended the sesion.", "left");
+        if (msg.payload && msg.payload.history) {
+          roomHistory = msg.payload.history;
+        } else {
+          roomHistory = [];
+        }
+        summaryDialog?.show();
       }
     } catch (e) {
       console.error("Failed to parse WS message:", e);
     }
   };
 
-  socket.addEventListener("message", messageListener);
-
-  return () => {
-    socket.removeEventListener("message", messageListener);
-    socket.close();
-  };
+  return () => { socket.close(); };
 });
 </script>
 
 <div class="room_wrapper">
   <div class="background_gradient background_gradient_top"></div>
   <div class="background_gradient background_gradient_bottom"></div>
-
   <div class="content_wrapper">
-  <nav>
-    <div class="nav_container">
-      <div class="back-link">
-        <a href="/">
-          <ArrowLeft color="white" />
-        </a>
-      </div>
-      <h1 class="room_name onest-600">{data?.room?.Name}</h1>
-      <div class="room_actions">
-        <button class="nav_button nav_invite" onclick={() => inviteDialog?.show()}>
-          <Invite color="var(--auxie-deep-navy-900)" />
-        </button>
-
-        <button class="nav_button nav_actions" id="nav_actions" popovertarget="actions_popover">
-          <EllipsisVert color="white" />
-        </button>
-
-        <SettingsPopover onInvite={() => inviteDialog?.show()} />
-      </div>
-    </div>
-  </nav>
-  <main>
-    <div class="main_content">
-      <div class="tabs-container">
-        <div class="tabs-header">
-          {#each tabs as tab, tabIdx}
-            {@const TabIcon = tab.icon}
-            <button 
-              class="tab-button onest-500 {tabIdx === activeTabIdx ? 'active' : ''}" 
-              onclick={() => activeTabIdx = tabIdx}
-            >
-              <TabIcon color={tabIdx === activeTabIdx ? "white" : "currentColor"} />
-              {tab.label}
-            </button>
-          {/each}
+    <nav>
+      <div class="nav_container">
+        <div class="back-link">
+          <a href="/"><ArrowLeft color="white" /></a>
         </div>
-        
-        <div class="tab-content">
-          <div class:hidden={activeTabIdx !== 0}>
-            <NowPlaying queue={queue} currentUser={currentUser} slug={data.slug} {ws} />
-            <QueueTab queue={queue} proposedQueue={proposedQueue} currentUser={currentUser} slug={data.slug} />
-          </div>
-          <div class:hidden={activeTabIdx !== 1}>
-            <UsersTab users={activeUsers} currentUser={currentUser} slug={data.slug} />
-          </div>
+        <h1 class="room_name onest-600">{data?.room?.Name}</h1>
+        <div class="room_actions">
+          <button class="nav_button nav_invite" onclick={() => inviteDialog?.show()}>
+            <Invite color="var(--auxie-deep-navy-900)" />
+          </button>
+          <button class="nav_button nav_actions" id="nav_actions" popovertarget="actions_popover">
+            <EllipsisVert color="white" />
+          </button>
+          <SettingsPopover 
+  onInvite={() => inviteDialog?.show()} 
+  onLeave={initiateLeave} 
+/>
         </div>
       </div>
-    </div>
-  </main>
-  <InviteDialog bind:this={inviteDialog} slug={data.slug} />
-  <SearchDialog bind:this={searchDialog} bind:searchQuery={searchQuery} slug={data.slug} />
-  
+    </nav>
+
+    <main>
+      <div class="main_content">
+        <div class="tabs-container">
+          <div class="tabs-header">
+            {#each tabs as tab, tabIdx}
+              {@const TabIcon = tab.icon}
+              <button
+                class="tab-button onest-500 {tabIdx === activeTabIdx ? 'active' : ''}"
+                onclick={() => activeTabIdx = tabIdx}
+              >
+                <TabIcon color={tabIdx === activeTabIdx ? "white" : "currentColor"} />
+                {tab.label}
+              </button>
+            {/each}
+          </div>
+
+          <div class="tab-content">
+            {#if activeTabIdx === 0}
+              <NowPlaying queue={queue} currentUser={currentUser} slug={data.slug} {ws} />
+              <QueueTab
+                bind:this={queueTabRef}
+                queue={queue}
+                proposedQueue={proposedQueue}
+                currentUser={currentUser}
+                slug={data.slug}
+              />
+            {:else if activeTabIdx === 1}
+              <UsersTab users={activeUsers} currentUser={currentUser} slug={data.slug} />
+            {/if}
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <InviteDialog bind:this={inviteDialog} slug={data.slug} />
+    <SearchDialog bind:this={searchDialog} bind:searchQuery={searchQuery} slug={data.slug} />
+    <LeaveDialog bind:this={leaveDialog} {isHost} onConfirm={confirmLeaveRoom} />
+    <SummaryDialog bind:this={summaryDialog} history={roomHistory} />
     <button class="fab-add-song onest-500" onclick={() => searchDialog?.show()}>
-      <Plus/> Add Song
+      <Plus /> Add Song
     </button>
   </div>
 </div>
 
 <style>
-  #nav_actions {
-    anchor-name: --actions-anchor;
-  }
+  #nav_actions { anchor-name: --actions-anchor; }
   .room_wrapper {
     background-color: var(--auxie-deep-navy-900);
     min-height: 100vh;
@@ -258,101 +290,64 @@ onMount(() => {
     animation: float-bottom 25s ease-in-out infinite alternate;
   }
   @keyframes float-top {
-    0% {
-      transform: translate(0, 0) scale(1) rotate(0deg);
-      filter: blur(150px) hue-rotate(0deg);
-    }
-    50% {
-      transform: translate(5%, 5%) scale(1.1) rotate(15deg);
-      filter: blur(150px) hue-rotate(30deg);
-    }
-    100% {
-      transform: translate(-5%, 5%) scale(0.9) rotate(-10deg);
-      filter: blur(150px) hue-rotate(-15deg);
-    }
+    0% { transform: translate(0,0) scale(1) rotate(0deg); filter: blur(150px) hue-rotate(0deg); }
+    50% { transform: translate(5%,5%) scale(1.1) rotate(15deg); filter: blur(150px) hue-rotate(30deg); }
+    100% { transform: translate(-5%,5%) scale(0.9) rotate(-10deg); filter: blur(150px) hue-rotate(-15deg); }
   }
   @keyframes float-bottom {
-    0% {
-      transform: translate(0, 0) scale(1) rotate(0deg);
-      filter: blur(150px) hue-rotate(0deg);
-    }
-    50% {
-      transform: translate(-5%, -5%) scale(1.1) rotate(-20deg);
-      filter: blur(150px) hue-rotate(-30deg);
-    }
-    100% {
-      transform: translate(5%, -5%) scale(0.95) rotate(10deg);
-      filter: blur(150px) hue-rotate(15deg);
-    }
+    0% { transform: translate(0,0) scale(1) rotate(0deg); filter: blur(150px) hue-rotate(0deg); }
+    50% { transform: translate(-5%,-5%) scale(1.1) rotate(-20deg); filter: blur(150px) hue-rotate(-30deg); }
+    100% { transform: translate(5%,-5%) scale(0.95) rotate(10deg); filter: blur(150px) hue-rotate(15deg); }
   }
   nav {
     padding: 5px;
     display: flex;
     justify-content: center;
-    .nav_container {
-      display: flex;
-      justify-content: space-around;
-      gap: 20px;
-      padding: 15px;
-      align-items: center;
-      background-color: var(--auxie-deep-navy-700);
-      border-radius: 20px;
-      corner-shape: squircle;
-      border: 2px solid var(--auxie-deep-navy-600);
-    }
-    .room_name {
-      font-size: 20px;
-    }
-    .room_actions {
-      display: flex;
-      align-items: center;
-      anchor-scope: --actions-anchor;
-      gap: 10px;
-    }
-    .nav_button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 10px;
-      corner-shape: squircle;
-      background: none;
-      padding: 5px;
-      border: 2px solid var(--auxie-deep-navy-600);
-    }
-    .nav_invite {
-      background-color: var(--auxie-intense-mint-500);
-      border-color: var(--auxie-intense-mint-700);
-      box-shadow:
-        inset 0 -2px 3px 0 color-mix(in srgb, var(--auxie-intense-mint-500), black
-              25%),
-        inset 0 2px 4.5px 0
-          color-mix(in srgb, var(--auxie-intense-mint-500), white 25%),
-        0 0 10px -2px var(--auxie-intense-mint-700);
-    }
-    .nav_actions {
-      background-color: var(--auxie-deep-navy-500);
-    }
   }
-  .back-link {
-    display: inline-flex;
+  nav .nav_container {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+    padding: 15px;
+    align-items: center;
+    background-color: var(--auxie-deep-navy-700);
+    border-radius: 20px;
+    border: 2px solid var(--auxie-deep-navy-600);
+  }
+  nav .room_name { font-size: 20px; }
+  nav .room_actions {
+    display: flex;
+    align-items: center;
+    anchor-scope: --actions-anchor;
+    gap: 10px;
+  }
+  nav .nav_button {
+    display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 10px;
+    background: none;
+    padding: 5px;
+    border: 2px solid var(--auxie-deep-navy-600);
   }
-  main {
-    padding: 15px;
+  nav .nav_invite {
+    background-color: var(--auxie-intense-mint-500);
+    border-color: var(--auxie-intense-mint-700);
+    box-shadow:
+      inset 0 -2px 3px 0 color-mix(in srgb, var(--auxie-intense-mint-500), black 25%),
+      inset 0 2px 4.5px 0 color-mix(in srgb, var(--auxie-intense-mint-500), white 25%),
+      0 0 10px -2px var(--auxie-intense-mint-700);
   }
+  nav .nav_actions { background-color: var(--auxie-deep-navy-500); }
+  .back-link { display: inline-flex; align-items: center; justify-content: center; }
+  main { padding: 15px; }
   .main_content {
     margin: 0 auto;
     display: grid;
     width: 100%;
     max-width: 600px;
   }
-  .tabs-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin-top: 10px;
-  }
+  .tabs-container { display: flex; flex-direction: column; gap: 20px; margin-top: 10px; }
   .tabs-header {
     display: flex;
     gap: 8px;
@@ -385,9 +380,7 @@ onMount(() => {
     color: var(--auxie-cloud-white-50);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   }
-  .tab-content {
-    animation: fadeIn 0.3s ease;
-  }
+  .tab-content { animation: fadeIn 0.3s ease; }
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
@@ -416,8 +409,5 @@ onMount(() => {
   .fab-add-song:hover {
     transform: translateX(-50%) translateY(-3px);
     box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
-  }
-  .hidden {
-    display: none !important;
   }
 </style>

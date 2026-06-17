@@ -235,3 +235,54 @@ func (r *RoomSqliteRepo) UpdateTrackTimestamps(roomTrackID int, startTime *time.
 	}
 	return nil
 }
+
+func (r *RoomSqliteRepo) GetRoomHistory(slug string) ([]models.TrackHistory, error) {
+	type dbTrackHistory struct {
+		Title          string     `db:"title"`
+		StartTimestamp *time.Time `db:"start_timestamp"`
+		Status         string     `db:"status"`
+	}
+
+	query := `
+		SELECT 
+			t.title, 
+			rt.start_timestamp, 
+			rt.status
+		FROM room_tracks rt
+		JOIN tracks t ON rt.track_id = t.id
+		JOIN rooms r ON rt.room_id = r.id
+		WHERE r.slug = ? AND rt.status IN ('played', 'skipped', 'playing')
+		ORDER BY rt.position ASC
+	`
+
+	var dbResults []dbTrackHistory
+	err := r.db.Select(&dbResults, query, slug)
+	if err != nil {
+		// Ignorujemy błędy i zawsze zwracamy zainicjalizowaną (choć pustą) tablicę
+		return make([]models.TrackHistory, 0), nil
+	}
+
+	// GWARANCJA poprawnego formatu JSON (zapobiega powstawaniu "null")
+	history := make([]models.TrackHistory, 0)
+
+	for _, row := range dbResults {
+		var startTimeStr *string
+		if row.StartTimestamp != nil {
+			formatted := row.StartTimestamp.Format("15:04")
+			startTimeStr = &formatted
+		}
+
+		history = append(history, models.TrackHistory{
+			Title:     row.Title,
+			StartTime: startTimeStr,
+			Skipped:   row.Status == "skipped",
+		})
+	}
+
+	return history, nil
+}
+
+func (r *RoomSqliteRepo) CloseRoom(slug string) error {
+	_, err := r.db.Exec(`DELETE FROM rooms WHERE slug = ?`, slug)
+	return err
+}

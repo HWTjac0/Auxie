@@ -86,3 +86,10 @@ type ArchivalTrack struct {
 	ArchivalID int `db:"archival_id"`
 	TrackID    int `db:"track_id"`
 }
+
+type TrackHistory struct {
+	Title string `json:"title"`
+	//Duration  string  `json:"duration"`
+	StartTime *string `json:"startTime"`
+	Skipped   bool    `json:"skipped"`
+}

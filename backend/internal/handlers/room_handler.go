@@ -1056,3 +1056,78 @@ func (h *RoomHandler) GetPlaybackToken(c *gin.Context) {
 		"token_type":   "Bearer",
 	})
 }
+
+// GetHistory pobiera historię dla okienka po zamknięciu/wyjściu z pokoju
+func (h *RoomHandler) GetHistory(c *gin.Context) {
+	slug := c.Param("slug")
+
+	history, err := h.roomRepo.GetRoomHistory(slug)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load history"})
+		return
+	}
+
+	c.JSON(http.StatusOK, history)
+}
+
+// LeaveRoom służy do opuszczenia pokoju przez "zwykłego" gościa
+func (h *RoomHandler) LeaveRoom(c *gin.Context) {
+	userID := c.GetInt("user_id")
+
+	// Widziałem w Twoim kodzie, że masz już userRepo.LeaveRoom(userID)
+	if err := h.userRepo.LeaveRoom(userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to leave room"})
+		return
+	}
+
+	// UWAGA: Powiadomienie USER_LEFT wysyła się u Ciebie samoistnie po przerwaniu
+	// połączenia WS (zobacz dbQueue w NewRoomHandler), więc nie musimy tego tu robić ręcznie!
+
+	c.JSON(http.StatusOK, gin.H{"message": "Left room successfully"})
+}
+
+// DeleteRoom zamyka pokój i wymusza wysłanie historii wszystkim gościom
+func (h *RoomHandler) DeleteRoom(c *gin.Context) {
+	slug := c.Param("slug")
+	userID := c.GetInt("user_id")
+
+	room, err := h.roomRepo.GetBySlug(slug)
+	if err != nil || room == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	if room.HostID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only host can close the room"})
+		return
+	}
+
+	// 1. ZANIM usuniemy pokój, pobieramy z bazy pełną historię
+	history, err := h.roomRepo.GetRoomHistory(slug)
+	if err != nil {
+		history = []models.TrackHistory{}
+	}
+
+	// 2. Rozgłaszamy event "ROOM_CLOSED" do wszystkich i DOŁĄCZAMY pobraną historię!
+	h.hub.broadcast <- &BroadcastMessage{
+		RoomID: slug,
+		Payload: gin.H{
+			"type": "ROOM_CLOSED",
+			"payload": gin.H{
+				"history": history,
+			},
+		},
+	}
+
+	if mgr, ok := h.playbackManagers[slug]; ok {
+		_ = mgr
+	}
+
+	// 3. Dopiero teraz bezpiecznie usuwamy pokój
+	if err := h.roomRepo.CloseRoom(slug); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close room in DB"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Room closed successfully"})
+}

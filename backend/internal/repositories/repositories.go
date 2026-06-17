@@ -62,6 +62,8 @@ type RoomRepository interface {
 	HasUserVotedSkip(roomTrackID int, userID int) (bool, error)
 	AddSkipVote(roomTrackID int, userID int) error
 	GetSkipVoteCount(roomTrackID int) (int, error)
+	GetRoomHistory(slug string) ([]models.TrackHistory, error)
+	CloseRoom(slug string) error
 }
 
 type TrackRepository interface {
