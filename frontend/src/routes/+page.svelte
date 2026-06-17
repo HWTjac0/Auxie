@@ -65,6 +65,45 @@ async function getRooms() {
 let user: User | null = $state(null);
 let loading = $state(true);
 let roomsRes = $state<Promise<Room[] | null>>(Promise.resolve(null));
+let refreshing = $state(false);
+
+async function refreshStatus() {
+  if (refreshing) return;
+  refreshing = true;
+  try {
+    const res = await fetch("/api/v1/user/refresh", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    if (res.ok) {
+      user = await res.json();
+    }
+  } catch (err) {
+    console.error("Failed to refresh user status:", err);
+  } finally {
+    refreshing = false;
+  }
+}
+
+async function disconnectService(service: "spotify" | "tidal" | "soundcloud") {
+  if (confirm(`Are you sure you want to disconnect your ${service} account?`)) {
+    try {
+      const res = await fetch(`/api/v1/user/disconnect/${service}`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        await refreshStatus();
+      } else {
+        alert("Failed to disconnect service");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error occurred while disconnecting service");
+    }
+  }
+}
 
 onMount(async () => {
   try {
@@ -162,7 +201,16 @@ onMount(async () => {
         <div class="accounts_group">
           <div class="separator_row">
             <div class="separator"></div>
-            <p>Connected accounts</p>
+            <div class="header-with-action">
+              <span class="header-title">Connected accounts</span>
+              <button onclick={refreshStatus} class="refresh-btn" title="Refresh connections" disabled={refreshing}>
+                {#if refreshing}
+                  <span class="spinner">⏳</span>
+                {:else}
+                  <span class="refresh-icon">🔄</span>
+                {/if}
+              </button>
+            </div>
             <div class="separator"></div>
           </div>
 
@@ -175,7 +223,16 @@ onMount(async () => {
                 {user.spotify_name ? `Connected (${user.spotify_name})` : 'Not connected'}
               </span>
             </div>
-            {#if !user.spotify_name}
+            {#if user.spotify_name}
+              <Button
+                onclick={() => disconnectService("spotify")}
+                class="account-btn smaller-btn"
+                bgColor="var(--auxie-soft-crimson-500)"
+                shadowColor="var(--auxie-soft-crimson-700)"
+              >
+                Disconnect
+              </Button>
+            {:else}
               <Button
                 onclick={loginWithSpotify}
                 class="account-btn smaller-btn"
@@ -195,7 +252,16 @@ onMount(async () => {
                 {user.soundcloud_name ? `Connected (${user.soundcloud_name})` : 'Not connected'}
               </span>
             </div>
-            {#if !user.soundcloud_name}
+            {#if user.soundcloud_name}
+              <Button
+                onclick={() => disconnectService("soundcloud")}
+                class="account-btn smaller-btn"
+                bgColor="var(--auxie-soft-crimson-500)"
+                shadowColor="var(--auxie-soft-crimson-700)"
+              >
+                Disconnect
+              </Button>
+            {:else}
               <Button
                 onclick={loginWithSoundCloud}
                 class="account-btn smaller-btn"
@@ -215,7 +281,16 @@ onMount(async () => {
                 {user.tidal_name ? `Connected (${user.tidal_name})` : 'Not connected'}
               </span>
             </div>
-            {#if !user.tidal_name}
+            {#if user.tidal_name}
+              <Button
+                onclick={() => disconnectService("tidal")}
+                class="account-btn smaller-btn"
+                bgColor="var(--auxie-soft-crimson-500)"
+                shadowColor="var(--auxie-soft-crimson-700)"
+              >
+                Disconnect
+              </Button>
+            {:else}
               <Button
                 onclick={loginWithTidal}
                 class="account-btn smaller-btn"
@@ -365,6 +440,34 @@ onMount(async () => {
     align-items: center;
     width: 100%;
     gap: 12px;
+  }
+  .header-with-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-title {
+    white-space: nowrap;
+  }
+  .refresh-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background-color 0.2s, transform 0.2s;
+  }
+  .refresh-btn:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: rotate(45deg);
+  }
+  .refresh-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
   .separator_row p {
     margin: 0;

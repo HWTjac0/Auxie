@@ -75,9 +75,8 @@ func (m *RoomPlaybackManager) StartIfIdle() {
 	_ = m.roomRepo.UpdateTrackStatus(next.RoomTrackID, "playing")
 	_ = m.roomRepo.UpdateTrackTimestamps(next.RoomTrackID, &now, nil)
 
-	// Clear state
-	m.cancel = nil
-	m.current = nil
+	// Keep state
+	m.current = &next
 }
 
 // Skip marks current as skipped and triggers next.
@@ -102,7 +101,12 @@ func (m *RoomPlaybackManager) Skip() {
 
 // MarkEnded marks track as played and records end timestamp.
 func (m *RoomPlaybackManager) MarkEnded(roomTrackID int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	_ = m.roomRepo.UpdateTrackStatus(roomTrackID, "played")
 	now := time.Now()
 	_ = m.roomRepo.UpdateTrackTimestamps(roomTrackID, nil, &now)
+	if m.current != nil && m.current.RoomTrackID == roomTrackID {
+		m.current = nil
+	}
 }

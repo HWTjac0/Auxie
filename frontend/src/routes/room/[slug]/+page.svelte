@@ -189,12 +189,13 @@ onMount(() => {
         </div>
         
         <div class="tab-content">
-          {#if activeTabIdx === 0}
+          <div class:hidden={activeTabIdx !== 0}>
             <NowPlaying queue={queue} currentUser={currentUser} slug={data.slug} {ws} />
             <QueueTab queue={queue} proposedQueue={proposedQueue} currentUser={currentUser} slug={data.slug} />
-          {:else if activeTabIdx === 1}
+          </div>
+          <div class:hidden={activeTabIdx !== 1}>
             <UsersTab users={activeUsers} currentUser={currentUser} slug={data.slug} />
-          {/if}
+          </div>
         </div>
       </div>
     </div>
@@ -408,5 +409,8 @@ onMount(() => {
   .fab-add-song:hover {
     transform: translateX(-50%) translateY(-3px);
     box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
+  }
+  .hidden {
+    display: none !important;
   }
 </style>

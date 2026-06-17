@@ -86,6 +86,8 @@ func SetupRouter(a *app.App) *gin.Engine {
 			protected.GET("/user/rooms", a.UserHandler.GetUserRooms)
 			protected.GET("/search", a.UserHandler.Search)
 			protected.GET("/room/:slug/ws", a.RoomHandler.HandleWS)
+			protected.POST("/user/disconnect/:service", a.UserHandler.DisconnectService)
+			protected.POST("/user/refresh", a.UserHandler.RefreshMe)
 		}
 	}
 

@@ -25,6 +25,9 @@ type UserRepository interface {
 	UpdateTidalInfo(userID int, tidalID string, authKey string, refreshKey string, expiresAt time.Time) error
 	GetBySoundCloudID(soundCloudID string) (*models.User, error)
 	UpdateSoundCloudInfo(userID int, soundCloudID string, authKey string, refreshKey string, expiresAt time.Time) error
+	DisconnectSpotify(userID int) error
+	DisconnectTidal(userID int) error
+	DisconnectSoundCloud(userID int) error
 }
 
 type RoomRepository interface {

@@ -7,22 +7,15 @@ import ThumbsUp from "./icons/ThumbsUp.svelte";
 
 let { queue = [], proposedQueue = [], currentUser, slug }: { queue?: any[], proposedQueue?: any[], currentUser?: any, slug?: string } = $props();
 
-let currentlyPlaying = $derived(queue.length > 0 ? queue[0] : null);
-let upNext = $derived(queue.length > 1 ? queue.slice(1) : []);
+let upNext = $derived(queue.length > 0 ? (queue[0].status === 'playing' ? queue.slice(1) : queue) : []);
 
 let canManage = $derived(currentUser?.CurrentRole === "Host" || currentUser?.CurrentRole === "DJ");
 
-let isSkipping = $state(false);
 let isApproving = $state(false);
-let isVotingSkip = $state(false);
 
 // Track liked state per roomTrackId
 let likedTracks = $state<Set<number>>(new Set());
 let likeCounts = $state<Record<number, number>>({});
-// skip vote state
-let skipVoteCount = $state(0);
-let skipVoteThreshold = $state(0);
-let hasVotedSkip = $state(false);
 
 // Sync likeCounts from queue
 $effect(() => {
@@ -32,47 +25,6 @@ $effect(() => {
     }
     likeCounts = counts;
 });
-
-// Reset skip vote state when track changes
-$effect(() => {
-    const id = currentlyPlaying?.room_track_id;
-    if (id) {
-        skipVoteCount = 0;
-        skipVoteThreshold = 0;
-        hasVotedSkip = false;
-    }
-});
-
-async function skipTrack() {
-    if (!slug || isSkipping || !canManage) return;
-    isSkipping = true;
-    try {
-        const res = await fetch(`/api/v1/room/${slug}/skip`, { method: 'POST' });
-        if (!res.ok) console.error("Failed to skip track");
-    } catch(err) {
-        console.error(err);
-    } finally {
-        isSkipping = false;
-    }
-}
-
-async function voteSkip() {
-    if (!slug || isVotingSkip || hasVotedSkip) return;
-    isVotingSkip = true;
-    try {
-        const res = await fetch(`/api/v1/room/${slug}/vote-skip`, { method: 'POST' });
-        const data = await res.json();
-        if (res.ok) {
-            hasVotedSkip = true;
-            skipVoteCount = data.votes;
-            skipVoteThreshold = data.threshold;
-        }
-    } catch(err) {
-        console.error(err);
-    } finally {
-        isVotingSkip = false;
-    }
-}
 
 async function likeTrack(roomTrackId: number) {
     if (!slug) return;
@@ -106,12 +58,6 @@ export function onWsMessage(msg: any) {
             likeCounts = { ...likeCounts, [room_track_id]: Math.max(0, (likeCounts[room_track_id] ?? 1) - 1) };
         }
         likedTracks = newSet;
-    } else if (msg.type === "SKIP_VOTE") {
-        const { room_track_id, votes, threshold } = msg.payload;
-        if (currentlyPlaying?.room_track_id === room_track_id) {
-            skipVoteCount = votes;
-            skipVoteThreshold = threshold;
-        }
     }
 }
 
@@ -159,7 +105,7 @@ async function handleProposed(trackId: number, action: 'approve' | 'reject') {
     <h2 class="onest-500">Queue</h2>
   </div>
   
-  {#if queue.length === 0}
+  {#if queue.length === 0 || (queue.length === 1 && queue[0].status === "playing")}
     <div class="empty-state">
       <div class="empty-icon">
         <MusicalNote size={40}/>
@@ -168,59 +114,6 @@ async function handleProposed(trackId: number, action: 'approve' | 'reject') {
       <p class="onest-300">Search for desired track to be played below and add it to the queue!</p>
     </div>
   {:else}
-    <div class="currently-playing">
-      <h3 class="section-title onest-500">Currently Playing</h3>
-      <div class="playing-card">
-        <img src={currentlyPlaying.cover_url?.String || currentlyPlaying.cover_url || "/placeholder.png"} alt={currentlyPlaying.title} class="playing-cover" />
-        <div class="playing-info">
-          <h4 class="onest-600">{currentlyPlaying.title}</h4>
-          <p class="onest-300">{currentlyPlaying.artist?.String || currentlyPlaying.artist || "Unknown Artist"}</p>
-        </div>
-        <div class="playing-actions">
-           <div class="playing-indicator">
-             <div class="bar"></div>
-             <div class="bar"></div>
-             <div class="bar"></div>
-           </div>
-           
-           {#if canManage}
-             <button class="skip-btn" onclick={skipTrack} disabled={isSkipping} title="Skip Track">
-               <SkipForward size={24} color="var(--auxie-cloud-white-50)" />
-             </button>
-           {/if}
-        </div>
-      </div>
-
-      <div class="track-voting">
-        <button
-          class="vote-btn like-btn {likedTracks.has(currentlyPlaying.room_track_id) ? 'active' : ''}"
-          onclick={() => likeTrack(currentlyPlaying.room_track_id)}
-          title="Like this track"
-        >
-          <ThumbsUp size={16} color="currentColor" />
-          <span>{likeCounts[currentlyPlaying.room_track_id] ?? currentlyPlaying.like_count ?? 0}</span>
-        </button>
-
-        {#if !canManage}
-          <button
-            class="vote-btn skip-vote-btn {hasVotedSkip ? 'voted' : ''}"
-            onclick={voteSkip}
-            disabled={hasVotedSkip || isVotingSkip}
-            title={hasVotedSkip ? "You voted to skip" : "Vote to skip this track"}
-          >
-            <SkipForward size={16} color="currentColor" />
-            <span>
-              {#if skipVoteThreshold > 0}
-                Skip {skipVoteCount}/{skipVoteThreshold}
-              {:else}
-                Vote skip
-              {/if}
-            </span>
-          </button>
-        {/if}
-      </div>
-    </div>
-
     {#if upNext.length > 0}
       <div class="up-next">
         <h3 class="section-title onest-500">Up Next</h3>

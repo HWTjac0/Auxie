@@ -153,6 +153,24 @@ func (r *UserSqliteRepo) UpdateSoundCloudInfo(userID int, soundCloudID string, a
 	return err
 }
 
+func (r *UserSqliteRepo) DisconnectSpotify(userID int) error {
+	query := `UPDATE users SET spotify_id = NULL, spotify_auth_key = NULL, spotify_refresh_key = NULL, spotify_token_expires_at = NULL WHERE id = ?`
+	_, err := r.db.Exec(query, userID)
+	return err
+}
+
+func (r *UserSqliteRepo) DisconnectTidal(userID int) error {
+	query := `UPDATE users SET tidal_id = NULL, tidal_key = NULL, tidal_refresh_key = NULL, tidal_token_expires_at = NULL WHERE id = ?`
+	_, err := r.db.Exec(query, userID)
+	return err
+}
+
+func (r *UserSqliteRepo) DisconnectSoundCloud(userID int) error {
+	query := `UPDATE users SET soundcloud_id = NULL, soundcloud_key = NULL, soundcloud_refresh_key = NULL, soundcloud_token_expires_at = NULL WHERE id = ?`
+	_, err := r.db.Exec(query, userID)
+	return err
+}
+
 func (r *UserSqliteRepo) LeaveRoom(userID int) error {
 	query := `UPDATE users SET current_room_id = NULL, current_role = NULL WHERE id = ?`
 	_, err := r.db.Exec(query, userID)
