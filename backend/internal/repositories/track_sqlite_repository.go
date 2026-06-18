@@ -15,8 +15,16 @@ func NewTrackSqliteRepo(db *database.DB) *TrackSqliteRepo {
 }
 
 func (r *TrackSqliteRepo) GetByID(id int) (*models.Track, error) {
-	log.Println("TODO: implement TrackSqliteRepo.GetByID")
-	return nil, nil
+	query := `SELECT id, source_uri, artist, title, album, cover_url, platform FROM tracks WHERE id = ?`
+	var track models.Track
+	err := r.db.Unsafe().Get(&track, query, id)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &track, nil
 }
 
 func (r *TrackSqliteRepo) GetByURI(uri string) (*models.Track, error) {

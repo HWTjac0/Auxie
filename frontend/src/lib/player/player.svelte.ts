@@ -1,4 +1,5 @@
 import { SpotifyAdapter } from './SpotifyAdapter';
+import { TidalAdapter } from './TidalAdapter';
 import type { PlayerAdapter, PlaybackStatus, Track, PlayerEvents } from './types';
 
 class UnifiedPlayerController {
@@ -17,6 +18,7 @@ class UnifiedPlayerController {
     constructor() {
         this.adapters = {
             Spotify: new SpotifyAdapter(),
+            Tidal: new TidalAdapter(),
         };
     }
 

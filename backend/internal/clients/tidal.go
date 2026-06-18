@@ -1,6 +1,8 @@
 package clients
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -120,4 +122,54 @@ func (c *TidalClient) SearchTrack(accessToken, query string) (interface{}, error
 		return nil, err
 	}
 	return result, nil
+}
+
+type TidalPlaybackInfo struct {
+	TrackID           int    `json:"trackId"`
+	AssetPresentation string `json:"assetPresentation"`
+	AudioMode         string `json:"audioMode"`
+	AudioQuality      string `json:"audioQuality"`
+	ManifestMimeType  string `json:"manifestMimeType"`
+	Manifest          string `json:"manifest"`
+}
+
+type TidalManifest struct {
+	MimeType       string   `json:"mimeType"`
+	Codecs         string   `json:"codecs"`
+	EncryptionType string   `json:"encryptionType"`
+	Urls           []string `json:"urls"`
+}
+
+func (c *TidalClient) GetStreamURL(accessToken, trackID string) (string, error) {
+	if strings.HasPrefix(trackID, "tidal:track:") {
+		trackID = strings.TrimPrefix(trackID, "tidal:track:")
+	}
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + accessToken,
+	}
+
+	urlStr := fmt.Sprintf("https://api.tidal.com/v1/tracks/%s/playbackinfopostpaywall?audioquality=HIGH&playbackmode=STREAM&assetpresentation=FULL", trackID)
+	
+	var playbackInfo TidalPlaybackInfo
+	err := c.base.Request("GET", urlStr, headers, nil, &playbackInfo)
+	if err != nil {
+		return "", fmt.Errorf("failed to get playback info: %w", err)
+	}
+
+	manifestBytes, err := base64.StdEncoding.DecodeString(playbackInfo.Manifest)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode manifest: %w", err)
+	}
+
+	var manifest TidalManifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return "", fmt.Errorf("failed to unmarshal manifest: %w", err)
+	}
+
+	if len(manifest.Urls) == 0 {
+		return "", fmt.Errorf("no stream URLs found in manifest")
+	}
+
+	return manifest.Urls[0], nil
 }
