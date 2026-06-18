@@ -1,56 +1,58 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
+import { onMount } from "svelte";
+import { goto } from "$app/navigation";
 
-  interface TrackHistory {
-    title: string;
-    //duration: string; // np. "03:45"
-    startTime: string | null; // np. "22:15" lub null jeśli pominięto
-    skipped: boolean;
-  }
+interface TrackHistory {
+  title: string;
+  //duration: string; // np. "03:45"
+  startTime: string | null; // np. "22:15" lub null jeśli pominięto
+  skipped: boolean;
+}
 
-  interface Props {
-    history: TrackHistory[];
-  }
+interface Props {
+  history: TrackHistory[];
+}
 
-  let { history }: Props = $props();
-  let dialog: HTMLDialogElement;
-  let copySuccess = $state(false);
-  let randomTitle = $state("");
+let { history }: Props = $props();
+let dialog: HTMLDialogElement;
+let copySuccess = $state(false);
+let randomTitle = $state("");
 
-  const titles = [
-    "Party Hits: Best Songs of the Night",
-    "Top Tracks We Loved at the Party",
-    "Favorite Bangers from Tonight",
-    "Best & Most Played Songs of the Party",
-    "Vibe Check: Our Top Party Anthems",
-    "Epic Night – Best Songs Recap"
-  ];
+const titles = [
+  "Party Hits: Best Songs of the Night",
+  "Top Tracks We Loved at the Party",
+  "Favorite Bangers from Tonight",
+  "Best & Most Played Songs of the Party",
+  "Vibe Check: Our Top Party Anthems",
+  "Epic Night – Best Songs Recap",
+];
 
-  export function show() {
-    randomTitle = titles[Math.floor(Math.random() * titles.length)];
-    dialog?.showModal();
-  }
+export function show() {
+  randomTitle = titles[Math.floor(Math.random() * titles.length)];
+  dialog?.showModal();
+}
 
-  function handleClose() {
-    dialog?.close();
-    window.location.href = "/";
-  }
+function handleClose() {
+  dialog?.close();
+  window.location.href = "/";
+}
 
-  async function copyToClipboard() {
-    const textToCopy = history.map(track => {
-      const timeInfo = track.skipped ? "utwór pominięty" : track.startTime;
+async function copyToClipboard() {
+  const textToCopy = history
+    .map((track) => {
+      const timeInfo = track.skipped ? "Skipped" : track.startTime;
       return `- ${track.title} - ${timeInfo}`;
-    }).join("\n");
+    })
+    .join("\n");
 
-    try {
-      await navigator.clipboard.writeText(`${randomTitle}\n\n${textToCopy}`);
-      copySuccess = true;
-      setTimeout(() => copySuccess = false, 2000);
-    } catch (err) {
-      console.error("Failed to copy: ", err);
-    }
+  try {
+    await navigator.clipboard.writeText(`${randomTitle}\n\n${textToCopy}`);
+    copySuccess = true;
+    setTimeout(() => (copySuccess = false), 2000);
+  } catch (err) {
+    console.error("Failed to copy: ", err);
   }
+}
 </script>
 
 <dialog bind:this={dialog}>
@@ -63,20 +65,20 @@
           <span class="track-title">{track.title}</span>
         </div>
         <div class="track-status {track.skipped ? 'skipped' : ''}">
-          {track.skipped ? "pominięty" : track.startTime}
+          {track.skipped ? "skipped" : track.startTime}
         </div>
       </div>
     {/each}
     {#if history.length === 0}
-      <p class="empty-msg">Brak utworów do wyświetlenia.</p>
+      <p class="empty-msg">No songs to display.</p>
     {/if}
   </div>
 
   <div class="actions">
     <button class="btn-copy" onclick={copyToClipboard}>
-      {copySuccess ? "Skopiowano!" : "Skopiuj listę"}
+      {copySuccess ? "Copied!" : "Copy list"}
     </button>
-    <button class="btn-close" onclick={handleClose}>Zamknij</button>
+    <button class="btn-close" onclick={handleClose}>Close</button>
   </div>
 </dialog>
 
