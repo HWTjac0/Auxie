@@ -223,8 +223,8 @@ onMount(() => {
           </div>
 
           <div class="tab-content">
+            <NowPlaying queue={queue} currentUser={currentUser} slug={data.slug} {ws} />
             {#if activeTabIdx === 0}
-              <NowPlaying queue={queue} currentUser={currentUser} slug={data.slug} {ws} />
               <QueueTab
                 bind:this={queueTabRef}
                 queue={queue}
