@@ -50,7 +50,7 @@ func (h *TidalHandler) Login(c *gin.Context) {
 		"response_type":         {"code"},
 		"client_id":             {clientID},
 		"redirect_uri":          {redirectURI},
-		"scope":                 {"user.read"},
+		"scope":                 {"user.read search.read playback"},
 		"code_challenge_method": {"S256"},
 		"code_challenge":        {challenge},
 		"state":                 {state},

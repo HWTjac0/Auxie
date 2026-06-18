@@ -27,8 +27,16 @@ func (r *RoomSqliteRepo) Create(room *models.Room) (int64, error) {
 }
 
 func (r *RoomSqliteRepo) GetByID(id int) (*models.Room, error) {
-	log.Println("TODO: implement RoomSqliteRepo.GetByID")
-	return nil, nil
+	var room models.Room
+	query := `SELECT * FROM rooms WHERE id = ? LIMIT 1`
+	err := r.db.Get(&room, query, id)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &room, nil
 }
 
 func (r *RoomSqliteRepo) GetActiveByHostID(hostID int) (*models.Room, error) {
@@ -81,6 +89,42 @@ func (r *RoomSqliteRepo) AddToQueue(track *models.RoomTrack) error {
 
 	_, err := r.db.Exec(query, track.RoomID, track.TrackID, track.AddedBy, track.RoomID, track.Status)
 	return err
+}
+
+func (r *RoomSqliteRepo) GetQueueItem(roomTrackID int) (*models.RoomQueueItem, error) {
+	query := `
+		SELECT 
+			rt.id AS room_track_id, 
+			rt.position, 
+			rt.status, 
+			rt.added_by, 
+			rt.like_count, 
+			t.id AS track_id, 
+			t.title, 
+			COALESCE(t.artist, '') AS artist, 
+			COALESCE(t.cover_url, '') AS cover_url, 
+			COALESCE(t.platform, '') AS platform,
+			COALESCE(t.source_uri, '') AS source_uri
+		FROM room_tracks rt
+		JOIN tracks t ON rt.track_id = t.id
+		WHERE rt.id = ? LIMIT 1
+	`
+	var item models.RoomQueueItem
+	err := r.db.Get(&item, query, roomTrackID)
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (r *RoomSqliteRepo) GetRoomTrack(roomTrackID int) (*models.RoomTrack, error) {
+	var track models.RoomTrack
+	query := `SELECT * FROM room_tracks WHERE id = ? LIMIT 1`
+	err := r.db.Get(&track, query, roomTrackID)
+	if err != nil {
+		return nil, err
+	}
+	return &track, nil
 }
 
 func (r *RoomSqliteRepo) GetQueue(roomID int) ([]models.RoomQueueItem, error) {

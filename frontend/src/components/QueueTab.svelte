@@ -4,6 +4,7 @@ import SkipForward from "./icons/SkipForward.svelte";
 import Check from "./icons/Check.svelte";
 import Cross from "./icons/Cross.svelte";
 import ThumbsUp from "./icons/ThumbsUp.svelte";
+import { globalPlayer } from "$lib/player/player.svelte";
 
 let { queue = [], proposedQueue = [], currentUser, slug }: { queue?: any[], proposedQueue?: any[], currentUser?: any, slug?: string } = $props();
 
@@ -12,6 +13,18 @@ let upNext = $derived(queue.length > 0 ? (queue[0].status === 'playing' ? queue.
 let canManage = $derived(currentUser?.CurrentRole === "Host" || currentUser?.CurrentRole === "DJ");
 
 let isApproving = $state(false);
+
+let timeRemaining = $derived(
+    globalPlayer.durationMs > 0 && globalPlayer.durationMs >= globalPlayer.positionMs
+    ? Math.floor((globalPlayer.durationMs - globalPlayer.positionMs) / 1000)
+    : 0
+);
+
+let formattedTime = $derived(
+    timeRemaining > 0
+    ? `${Math.floor(timeRemaining / 60)}:${(timeRemaining % 60).toString().padStart(2, '0')}`
+    : ""
+);
 
 // Track liked state per roomTrackId
 let likedTracks = $state<Set<number>>(new Set());
@@ -101,7 +114,12 @@ async function handleProposed(trackId: number, action: 'approve' | 'reject') {
   {/if}
 
   <div class="queue-header">
-    <h2 class="onest-500">Queue</h2>
+    <h2 class="onest-500">
+        Queue
+        {#if formattedTime}
+            <span class="time-remaining">({formattedTime} left)</span>
+        {/if}
+    </h2>
   </div>
   
   {#if queue.length === 0 || (queue.length === 1 && queue[0].status === "playing")}
@@ -159,6 +177,15 @@ async function handleProposed(trackId: number, action: 'approve' | 'reject') {
     font-size: 18px;
     color: var(--auxie-cloud-white-50);
     margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .time-remaining {
+    font-size: 13px;
+    color: var(--auxie-cloud-white-400);
+    font-weight: 400;
   }
 
   .section-title {

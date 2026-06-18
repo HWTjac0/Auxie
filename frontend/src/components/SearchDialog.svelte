@@ -62,10 +62,14 @@ function parseTidalResults(json: any): any[] {
       artistsMap.set(item.id, item.attributes?.name || "");
     } else if (item.type === "albums") {
       const name = item.attributes?.title || "";
-      // Tidal V2 coverArt relation is to-one, so data is a single object
-      const coverArtId = item.relationships?.coverArt?.data?.id;
+      // In Tidal v2, cover might be in attributes.imageCover, attributes.cover, or attributes.image
+      let coverArtId = item.attributes?.imageCover?.[0]?.url || item.attributes?.imageCover || item.attributes?.cover || item.attributes?.image || item.relationships?.coverArt?.data?.id;
+      // Handle array format if returned
+      if (Array.isArray(coverArtId)) {
+        coverArtId = coverArtId[0]?.url || coverArtId[0];
+      }
       let coverUrl = "";
-      if (coverArtId) {
+      if (coverArtId && typeof coverArtId === 'string') {
         const parts = coverArtId.replace(/-/g, "/");
         coverUrl = `https://resources.tidal.com/images/${parts}/160x160.jpg`;
       }

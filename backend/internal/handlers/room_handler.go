@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"auxie/backend/internal/clients"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -23,9 +24,10 @@ type RoomHandler struct {
 	trackRepo        repositories.TrackRepository
 	hub              *RoomHub
 	playbackManagers map[string]*RoomPlaybackManager
+	tidalClient      *clients.TidalClient
 }
 
-func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.UserRepository, trackRepo repositories.TrackRepository) *RoomHandler {
+func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.UserRepository, trackRepo repositories.TrackRepository, tidalClient *clients.TidalClient) *RoomHandler {
 	hub := NewRoomHub()
 	playbackManagers := make(map[string]*RoomPlaybackManager)
 
@@ -99,6 +101,7 @@ func NewRoomHandler(roomRepo repositories.RoomRepository, userRepo repositories.
 		trackRepo:        trackRepo,
 		hub:              hub,
 		playbackManagers: playbackManagers,
+		tidalClient:      tidalClient,
 	}
 }
 
@@ -988,13 +991,6 @@ func (h *RoomHandler) HandleWS(c *gin.Context) {
 
 // StreamSpotify returns audio stream for a Spotify track
 func (h *RoomHandler) StreamSpotify(c *gin.Context) {
-	roomTrackID := c.Param("room_track_id")
-	_, err := strconv.Atoi(roomTrackID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid track ID"})
-		return
-	}
-
 	// TODO: Implement actual Spotify audio streaming
 	// For now, return a placeholder error
 	c.JSON(http.StatusNotImplemented, gin.H{
@@ -1005,30 +1001,50 @@ func (h *RoomHandler) StreamSpotify(c *gin.Context) {
 
 // StreamTidal returns audio stream for a Tidal track
 func (h *RoomHandler) StreamTidal(c *gin.Context) {
-	roomTrackID := c.Param("room_track_id")
-	_, err := strconv.Atoi(roomTrackID)
+	roomTrackIDStr := c.Param("room_track_id")
+	roomTrackID, err := strconv.Atoi(roomTrackIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid track ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid room_track_id"})
 		return
 	}
 
-	// TODO: Implement actual Tidal audio streaming
-	// For now, return a placeholder error
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"error":   "Tidal audio streaming not yet implemented",
-		"message": "Please use the Tidal app to listen to this track",
-	})
+	// We need to find the room and host to get the host's Tidal token
+	// This could be optimized, but let's query the room track to find the room id
+	roomTrack, err := h.roomRepo.GetRoomTrack(roomTrackID)
+	if err != nil || roomTrack == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Track not found in room"})
+		return
+	}
+
+	actualTrack, err := h.trackRepo.GetByID(roomTrack.TrackID)
+	if err != nil || actualTrack == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Track details not found"})
+		return
+	}
+
+	room, err := h.roomRepo.GetByID(roomTrack.RoomID)
+	if err != nil || room == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+		return
+	}
+
+	hostUser, err := h.userRepo.GetByID(room.HostID)
+	if err != nil || !hostUser.TidalID.Valid || !hostUser.TidalKey.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Host does not have Tidal connected"})
+		return
+	}
+
+	streamURL, err := h.tidalClient.GetStreamURL(hostUser.TidalKey.String, actualTrack.SourceURI)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get Tidal stream URL", "details": err.Error()})
+		return
+	}
+
+	c.Redirect(http.StatusFound, streamURL)
 }
 
 // StreamSoundCloud returns audio stream for a SoundCloud track
 func (h *RoomHandler) StreamSoundCloud(c *gin.Context) {
-	roomTrackID := c.Param("room_track_id")
-	_, err := strconv.Atoi(roomTrackID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid track ID"})
-		return
-	}
-
 	// TODO: Implement actual SoundCloud audio streaming
 	// For now, return a placeholder error
 	c.JSON(http.StatusNotImplemented, gin.H{
