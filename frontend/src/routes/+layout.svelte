@@ -1,12 +1,23 @@
 <script lang="ts">
 import { onMount } from "svelte";
-import { goto } from "$app/navigation";
+import { goto, onNavigate } from "$app/navigation";
 import { page } from "$app/state";
 import favicon from "$lib/assets/favicon.svg";
 import "../styles/global.css";
 import ToastContainer from "../components/ToastContainer.svelte";
 
 let { children } = $props();
+
+onNavigate((navigation) => {
+	if (!document.startViewTransition) return;
+
+	return new Promise((resolve) => {
+		document.startViewTransition(async () => {
+			resolve();
+			await navigation.complete;
+		});
+	});
+});
 
 onMount(async () => {
   const publicPaths = ["/welcome", "/create", "/join"];
